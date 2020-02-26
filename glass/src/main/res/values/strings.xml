@@ -1,3 +1,8 @@
 <resources>
-    <string name="app_name">glass</string>
+    <string name="app_name">GlassEcho</string>
+    <string name="title_activity_live_card_service">GlassEcho LiveCard</string>
+    <string name="voice_trigger">Echo</string>
+
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
 </resources>

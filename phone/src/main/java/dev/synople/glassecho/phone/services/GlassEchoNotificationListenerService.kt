@@ -1,5 +1,6 @@
 package dev.synople.glassecho.phone.services
 
+import android.app.Notification
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
@@ -7,6 +8,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.text.SpannableString
 import android.util.Log
 import kotlinx.coroutines.*
 import java.io.IOException
@@ -26,14 +28,28 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
     private lateinit var glass: ConnectedThread
 
-    val uuid = UUID.fromString("f0ca1b7a-eea3-48fa-8ccb-ea6434a11de8")
+    val uuid = UUID.randomUUID()
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onBind(intent: Intent?): IBinder? {
+        Log.v(TAG, "onBind")
         runBlocking {
             getGlass()?.let {
                 glass = it
             } ?: run {
-                // TODO: Couldn't connect to Glass
+                Log.e(TAG, "Couldn't connect to Glass")
+            }
+        }
+        return super.onBind(intent)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.v(TAG, "onStartCommand")
+        runBlocking {
+            getGlass()?.let {
+                glass = it
+                Log.v(TAG, "Got Glass")
+            } ?: run {
+                Log.e(TAG, "Couldn't connect to Glass")
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -48,10 +64,8 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         super.onNotificationPosted(sbn)
         Log.v(
             TAG,
-            "android.textLines: " + sbn?.notification?.extras?.getString("android.textLines")
+            "content: " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString()
         )
-        Log.v(TAG, "android.text: " + sbn?.notification?.extras?.getString("android.text"))
-        Log.v(TAG, "notif toString: " + sbn?.notification?.toString())
         glass.write(null)
     }
 
@@ -60,11 +74,25 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
     }
 
     // TODO: Retrieve from SharedPref since there could be multiple Glass connected
-    private suspend fun getGlass(): ConnectedThread? {
+    private fun getGlass(): ConnectedThread? {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         bluetoothAdapter.bondedDevices.forEach {
             if (it.name.contains("Glass")) {
-                return ConnectedThread(it.createRfcommSocketToServiceRecord(uuid))
+                Log.v(TAG, "Trying to connect to ${it.name}")
+                val socket = it.createRfcommSocketToServiceRecord(uuid)
+                try {
+                    socket.connect()
+                } catch (e: IOException) {
+                    try {
+                        socket.close()
+                    } catch (e1: IOException) {
+                        Log.e(TAG, "socket.close() failed", e1)
+                    }
+                    Log.e(TAG, "socket.connect() failed", e)
+                }
+                val thread = ConnectedThread(socket)
+                thread.start()
+                return thread
             }
         }
         return null
@@ -72,12 +100,17 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
     class ConnectedThread(private val bluetoothSocket: BluetoothSocket) : Thread() {
         private val TAG = "ConnectedThread"
-        private lateinit var inputStream: InputStream
-        private lateinit var outputStream: OutputStream
+        private var inputStream: InputStream = bluetoothSocket.inputStream
+        private var outputStream: OutputStream = bluetoothSocket.outputStream
 
         override fun run() {
             val buffer = ByteArray(1024)
             var bytes: Int
+
+            Log.v(TAG, bluetoothSocket.toString())
+            inputStream = bluetoothSocket.inputStream
+            outputStream = bluetoothSocket.outputStream
+
             while (true) {
                 try {
                     bytes = inputStream.read(buffer)
