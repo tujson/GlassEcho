@@ -10,6 +10,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.text.SpannableString
 import android.util.Log
+import dev.synople.glassecho.common.glassEchoUUID
 import kotlinx.coroutines.*
 import java.io.IOException
 import java.io.InputStream
@@ -27,8 +28,6 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         get() = Dispatchers.IO + coroutineJob
 
     private lateinit var glass: ConnectedThread
-
-    val uuid = UUID.randomUUID()
 
     override fun onBind(intent: Intent?): IBinder? {
         Log.v(TAG, "onBind")
@@ -66,7 +65,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             TAG,
             "content: " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString()
         )
-        glass.write(null)
+        glass.write(sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString().toByteArray())
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
@@ -79,7 +78,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         bluetoothAdapter.bondedDevices.forEach {
             if (it.name.contains("Glass")) {
                 Log.v(TAG, "Trying to connect to ${it.name}")
-                val socket = it.createRfcommSocketToServiceRecord(uuid)
+                val socket = it.createRfcommSocketToServiceRecord(glassEchoUUID)
                 try {
                     socket.connect()
                 } catch (e: IOException) {
@@ -107,7 +106,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             val buffer = ByteArray(1024)
             var bytes: Int
 
-            Log.v(TAG, bluetoothSocket.toString())
+            Log.v(TAG, "Connected: " + bluetoothSocket.isConnected)
             inputStream = bluetoothSocket.inputStream
             outputStream = bluetoothSocket.outputStream
 
