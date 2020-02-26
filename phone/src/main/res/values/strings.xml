@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">GlassEcho</string>
+    <string name="service_name">GlassEcho Notification Listener</string>
 </resources>
