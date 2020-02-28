@@ -14,7 +14,8 @@ import kotlinx.android.synthetic.main.row_notification.view.*
 class NotificationAdapter(
     private val apps: List<ResolveInfo>,
     private val packageManager: PackageManager,
-    private val sharedPref: SharedPreferences
+    private val sharedPref: SharedPreferences,
+    private val onSwitch: (String, Boolean) -> Unit
 ) : RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
     class ViewHolder(
         override val containerView: View
@@ -22,7 +23,8 @@ class NotificationAdapter(
         fun bindApp(
             resolveInfo: ResolveInfo,
             packageManager: PackageManager,
-            sharedPref: SharedPreferences
+            sharedPref: SharedPreferences,
+            onSwitch: (String, Boolean) -> Unit
         ) {
             containerView.ivAppIcon.setImageDrawable(resolveInfo.loadIcon(packageManager))
             containerView.tvAppName.text = resolveInfo.loadLabel(packageManager)
@@ -37,6 +39,8 @@ class NotificationAdapter(
                         containerView.ivSwitch.isChecked
                     )
                     .apply()
+
+                onSwitch(resolveInfo.activityInfo.packageName, containerView.ivSwitch.isChecked)
             }
         }
     }
@@ -47,7 +51,7 @@ class NotificationAdapter(
         )
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bindApp(apps[position], packageManager, sharedPref)
+        holder.bindApp(apps[position], packageManager, sharedPref, onSwitch)
     }
 
     override fun getItemCount() = apps.size
