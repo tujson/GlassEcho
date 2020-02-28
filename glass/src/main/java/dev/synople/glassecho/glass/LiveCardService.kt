@@ -1,8 +1,5 @@
 package dev.synople.glassecho.glass
 
-import com.google.android.glass.timeline.LiveCard
-import com.google.android.glass.timeline.LiveCard.PublishMode
-
 import android.app.PendingIntent
 import android.app.Service
 import android.bluetooth.BluetoothAdapter
@@ -14,6 +11,8 @@ import android.content.IntentFilter
 import android.os.IBinder
 import android.util.Log
 import android.widget.RemoteViews
+import com.google.android.glass.timeline.LiveCard
+import com.google.android.glass.timeline.LiveCard.PublishMode
 import dev.synople.glassecho.common.glassEchoUUID
 import java.io.IOException
 import java.io.InputStream
@@ -81,13 +80,14 @@ class LiveCardService : Service() {
         }
     }
 
-    inner class AcceptThread(): Thread() {
+    inner class AcceptThread() : Thread() {
         private val TAG = "AcceptThread"
         override fun run() {
             try {
                 Log.v(TAG, "Accepted")
 
-                val bluetoothServerSocket = BluetoothAdapter.getDefaultAdapter().listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
+                val bluetoothServerSocket = BluetoothAdapter.getDefaultAdapter()
+                    .listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
                 Log.v(TAG, "Accepted2")
 
                 val socket = bluetoothServerSocket.accept()

@@ -2,22 +2,21 @@ package dev.synople.glassecho.phone.services
 
 import android.app.Notification
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
 import android.os.IBinder
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.text.SpannableString
 import android.util.Log
 import dev.synople.glassecho.common.glassEchoUUID
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
-import java.util.*
-import kotlin.concurrent.thread
 import kotlin.coroutines.CoroutineContext
 
 
@@ -63,8 +62,9 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         super.onNotificationPosted(sbn)
         Log.v(
             TAG,
-            "content: " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString()
+            "Content (${sbn?.packageName}): " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString()
         )
+
         glass.write(sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString().toByteArray())
     }
 
