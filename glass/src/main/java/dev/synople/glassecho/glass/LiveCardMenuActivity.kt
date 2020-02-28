@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Intent
 import android.view.Menu
 import android.view.MenuItem
-import dev.synople.glassecho.glass.LiveCardService.Companion.CONFIG_CHANGE
 
 class LiveCardMenuActivity : Activity() {
 
@@ -22,14 +21,14 @@ class LiveCardMenuActivity : Activity() {
         when (item.itemId) {
             R.id.action_connect -> {
                 Intent().also { intent ->
-                    intent.action = CONFIG_CHANGE
+                    intent.action = CONNECT
                     sendBroadcast(intent)
                 }
                 return true
             }
             R.id.action_disconnect -> {
                 Intent().also { intent ->
-                    intent.action = CONFIG_CHANGE
+                    intent.action = UNPUBLISH_LIVE_CARD
                     sendBroadcast(intent)
                 }
                 return true
@@ -41,5 +40,10 @@ class LiveCardMenuActivity : Activity() {
     override fun onOptionsMenuClosed(menu: Menu) {
         super.onOptionsMenuClosed(menu)
         finish()
+    }
+
+    companion object {
+        const val CONNECT = "connect"
+        const val UNPUBLISH_LIVE_CARD = "unpublishLiveCard"
     }
 }

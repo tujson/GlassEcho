@@ -1,5 +1,6 @@
 package dev.synople.glassecho.glass
 
+import android.app.Activity
 import android.app.PendingIntent
 import android.app.Service
 import android.bluetooth.BluetoothAdapter
@@ -8,12 +9,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioManager
 import android.os.IBinder
 import android.util.Log
 import android.widget.RemoteViews
+import android.widget.Toast
 import com.google.android.glass.timeline.LiveCard
 import com.google.android.glass.timeline.LiveCard.PublishMode
 import dev.synople.glassecho.common.glassEchoUUID
+import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.CONNECT
+import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE_CARD
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -25,6 +30,7 @@ class LiveCardService : Service() {
     private var liveCard: LiveCard? = null
     private lateinit var remoteViews: RemoteViews
     private lateinit var broadcastReceiver: BroadcastReceiver
+    private val acceptThread = AcceptThread()
 
     override fun onBind(intent: Intent): IBinder? {
         return null
@@ -37,19 +43,18 @@ class LiveCardService : Service() {
             remoteViews = RemoteViews(packageName, R.layout.live_card)
             liveCard!!.setViews(remoteViews)
 
-            remoteViews.setTextViewText(R.id.tvTempo, message)
+            remoteViews.setTextViewText(R.id.tvTempo, "GlassEcho\nStatus: Not connected")
 
             val menuIntent = Intent(this, LiveCardMenuActivity::class.java)
             liveCard!!.setAction(PendingIntent.getActivity(this, 0, menuIntent, 0))
             liveCard!!.publish(PublishMode.REVEAL)
 
             broadcastReceiver = MyBroadcastReceiver()
-            val filter = IntentFilter(CONFIG_CHANGE)
-            registerReceiver(broadcastReceiver, filter)
+            registerReceiver(broadcastReceiver, IntentFilter(CONNECT))
+            registerReceiver(broadcastReceiver, IntentFilter(UNPUBLISH_LIVE_CARD))
+            registerReceiver(broadcastReceiver, IntentFilter(MESSAGE))
 
-            // TODO: Executor? Make sure only one of these exist.
             thread {
-                val acceptThread = AcceptThread()
                 acceptThread.start()
             }
         } else {
@@ -68,15 +73,49 @@ class LiveCardService : Service() {
     }
 
     companion object {
-        const val CONFIG_CHANGE = "dev.synople.glassecho.CONFIG_CHANGE"
+        const val MESSAGE = "message"
         private const val LIVE_CARD_TAG = "LiveCardService"
-        var message = "Hello, world!"
     }
 
-    class MyBroadcastReceiver : BroadcastReceiver() {
+    private fun processMessage(message: String) {
+        Log.v(LIVE_CARD_TAG, "processMessage: $message")
+
+        val audio =
+            this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audio.playSoundEffect(13)
+
+        remoteViews.setTextViewText(R.id.tvTempo, message)
+        liveCard?.setViews(remoteViews)
+    }
+
+    private fun startConnecting() {
+        remoteViews.setTextViewText(R.id.tvTempo, "GlassEcho\nStatus: Connecting")
+        liveCard?.setViews(remoteViews)
+
+        thread {
+            val acceptThread = AcceptThread()
+            acceptThread.start()
+        }
+    }
+
+    inner class MyBroadcastReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            (context as LiveCardService).remoteViews.setTextViewText(R.id.tvTempo, message)
-            context.liveCard?.setViews(context.remoteViews)
+            intent?.let { it ->
+                when (it.action) {
+                    CONNECT -> {
+                        startConnecting()
+                    }
+                    UNPUBLISH_LIVE_CARD -> {
+                        onDestroy()
+                    }
+                    MESSAGE -> {
+                        processMessage(it.getStringExtra(MESSAGE))
+                    }
+                    else -> {
+                        // Do nothing. Unsupported.
+                    }
+                }
+            }
         }
     }
 
@@ -84,14 +123,10 @@ class LiveCardService : Service() {
         private val TAG = "AcceptThread"
         override fun run() {
             try {
-                Log.v(TAG, "Accepted")
-
                 val bluetoothServerSocket = BluetoothAdapter.getDefaultAdapter()
                     .listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
-                Log.v(TAG, "Accepted2")
 
                 val socket = bluetoothServerSocket.accept()
-                Log.v(TAG, "Accepted3")
                 val connectedThread = ConnectedThread(socket)
                 connectedThread.start()
             } catch (e: IOException) {
@@ -110,6 +145,13 @@ class LiveCardService : Service() {
             var bytes: Int
 
             Log.v(TAG, "Connected: " + bluetoothSocket.isConnected)
+
+            Intent().also { intent ->
+                intent.action = MESSAGE
+                intent.putExtra(MESSAGE, "GlassEcho\nStatus: Connected")
+                sendBroadcast(intent)
+            }
+
             inputStream = bluetoothSocket.inputStream
             outputStream = bluetoothSocket.outputStream
 
@@ -120,10 +162,11 @@ class LiveCardService : Service() {
                     Log.v(TAG, "incomingMessage: $incomingMessage")
 
                     Intent().also { intent ->
-                        message = incomingMessage
-                        intent.action = CONFIG_CHANGE
+                        intent.action = MESSAGE
+                        intent.putExtra(MESSAGE, incomingMessage)
                         sendBroadcast(intent)
                     }
+
 //                    UiThreadStatement.runOnUiThread(Runnable { view_data.setText(incomingMessage) })
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)

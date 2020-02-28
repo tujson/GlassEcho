@@ -1,14 +1,20 @@
 package dev.synople.glassecho.phone.services
 
-import android.app.Notification
+import android.app.*
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothSocket
+import android.content.Context
 import android.content.Intent
-import android.os.IBinder
+import android.content.SharedPreferences
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import dev.synople.glassecho.common.glassEchoUUID
+import dev.synople.glassecho.phone.MainActivity
+import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
+import dev.synople.glassecho.phone.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,21 +33,25 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         get() = Dispatchers.IO + coroutineJob
 
     private lateinit var glass: ConnectedThread
-
-    override fun onBind(intent: Intent?): IBinder? {
-        Log.v(TAG, "onBind")
-        runBlocking {
-            getGlass()?.let {
-                glass = it
-            } ?: run {
-                Log.e(TAG, "Couldn't connect to Glass")
-            }
-        }
-        return super.onBind(intent)
-    }
+    private lateinit var sharedPref: SharedPreferences
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.v(TAG, "onStartCommand")
+
+        createNotificationChannel()
+        val pendingIntent: PendingIntent =
+            Intent(this, MainActivity::class.java).let { notificationIntent ->
+                PendingIntent.getActivity(this, 0, notificationIntent, 0)
+            }
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(getText(R.string.notification_title))
+            .setContentText(getText(R.string.notification_message))
+            .setContentIntent(pendingIntent)
+            .build()
+
+        startForeground(ONGOING_NOTIFICATION_ID, notification)
+
+        sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
         runBlocking {
             getGlass()?.let {
                 glass = it
@@ -50,12 +60,25 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                 Log.e(TAG, "Couldn't connect to Glass")
             }
         }
-        return super.onStartCommand(intent, flags, startId)
+        return Service.START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
         coroutineJob.cancel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                CHANNEL_ID,
+                "GlassEcho Service",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            getSystemService(NotificationManager::class.java)?.createNotificationChannel(
+                serviceChannel
+            )
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -65,7 +88,22 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             "Content (${sbn?.packageName}): " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString()
         )
 
-        glass.write(sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString().toByteArray())
+        if (!::sharedPref.isInitialized) {
+            sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
+        }
+
+        if (!::glass.isInitialized) {
+            getGlass()?.let {
+                glass = it
+                Log.v(TAG, "Got Glass")
+            } ?: run {
+                Log.e(TAG, "Couldn't connect to Glass")
+            }
+        }
+
+        if (sharedPref.getBoolean(sbn?.packageName, false)) {
+            glass.write(sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString().toByteArray())
+        }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
@@ -140,5 +178,10 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                 Log.e(TAG, "cancel", e)
             }
         }
+    }
+
+    companion object {
+        const val CHANNEL_ID = "GlassEchoServiceChannel"
+        const val ONGOING_NOTIFICATION_ID = 281
     }
 }
