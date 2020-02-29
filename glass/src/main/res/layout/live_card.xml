@@ -2,13 +2,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="@dimen/card_margin"
+    android:paddingTop="10dp"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
     tools:context=".LiveCardService">
 
     <ImageView
         android:id="@+id/ivAppIcon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:src="@drawable/ic_glass_logo" />
@@ -16,13 +18,14 @@
     <TextView
         android:id="@+id/tvAppName"
         android:layout_width="wrap_content"
+        android:gravity="center_vertical"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
+        android:layout_marginStart="8dp"
         android:layout_alignTop="@id/ivAppIcon"
         android:layout_alignBottom="@id/ivAppIcon"
         android:layout_centerVertical="true"
         android:layout_toEndOf="@id/ivAppIcon"
-        android:textSize="24sp" />
+        android:textSize="22sp" />
 
     <TextView
         android:id="@+id/tvTitle"
@@ -31,7 +34,7 @@
         android:layout_below="@+id/tvAppName"
         android:layout_alignParentStart="true"
         android:layout_marginTop="12dp"
-        android:textSize="28sp" />
+        android:textSize="24sp" />
 
     <TextView
         android:id="@+id/tvText"
