@@ -6,12 +6,18 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import dev.synople.glassecho.common.glassEchoUUID
+import dev.synople.glassecho.common.models.EchoNotification
+import dev.synople.glassecho.common.models.echoNotificationToString
 import dev.synople.glassecho.phone.MainActivity
 import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
@@ -100,10 +106,34 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                 Log.e(TAG, "Couldn't connect to Glass")
             }
         }
+        Log.v("NotificationPosted", "Notif")
 
         if (sharedPref.getBoolean(sbn?.packageName, false)) {
-            glass.write(sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString().toByteArray())
+            sbn?.notification?.let {
+                val appIcon = getBitmapFromDrawable(packageManager.getApplicationIcon(sbn.packageName))
+                val appName = packageManager.getApplicationLabel(
+                    packageManager.getApplicationInfo(
+                        sbn.packageName,
+                        0
+                    )
+                ).toString()
+                val title = it.extras.get(Notification.EXTRA_TITLE).toString()
+                val text = it.extras.get(Notification.EXTRA_TEXT).toString()
+                glass.write(EchoNotification(appIcon, appName, title, text))
+            }
         }
+    }
+
+    private fun getBitmapFromDrawable(drawable: Drawable): Bitmap {
+        val bmp: Bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bmp)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return Bitmap.createScaledBitmap(bmp, 20, 20, false)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
@@ -161,10 +191,16 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             }
         }
 
-        fun write(bytes: ByteArray?) {
+        fun write(echoNotification: EchoNotification) {
+            write(echoNotificationToString(echoNotification).toByteArray())
+        }
+
+        private fun write(bytes: ByteArray?) {
             val text = String(bytes!!, Charset.defaultCharset())
             try {
+                Log.v("ConnectedThread", "Write: $text")
                 outputStream.write(bytes)
+                outputStream.flush()
             } catch (e: IOException) {
                 Log.e(TAG, "write()", e)
             }

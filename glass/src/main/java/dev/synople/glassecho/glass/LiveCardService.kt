@@ -1,8 +1,6 @@
 package dev.synople.glassecho.glass
 
-import android.app.Activity
-import android.app.PendingIntent
-import android.app.Service
+import android.app.*
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothSocket
 import android.content.BroadcastReceiver
@@ -13,10 +11,10 @@ import android.media.AudioManager
 import android.os.IBinder
 import android.util.Log
 import android.widget.RemoteViews
-import android.widget.Toast
 import com.google.android.glass.timeline.LiveCard
 import com.google.android.glass.timeline.LiveCard.PublishMode
-import dev.synople.glassecho.common.glassEchoUUID
+import dev.synople.glassecho.common.*
+import dev.synople.glassecho.common.models.messageToEchoNotification
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.CONNECT
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE_CARD
 import java.io.IOException
@@ -43,7 +41,7 @@ class LiveCardService : Service() {
             remoteViews = RemoteViews(packageName, R.layout.live_card)
             liveCard!!.setViews(remoteViews)
 
-            remoteViews.setTextViewText(R.id.tvTempo, "GlassEcho\nStatus: Not connected")
+            remoteViews.setTextViewText(R.id.tvText, "GlassEcho\nStatus: Not connected")
 
             val menuIntent = Intent(this, LiveCardMenuActivity::class.java)
             liveCard!!.setAction(PendingIntent.getActivity(this, 0, menuIntent, 0))
@@ -53,6 +51,7 @@ class LiveCardService : Service() {
             registerReceiver(broadcastReceiver, IntentFilter(CONNECT))
             registerReceiver(broadcastReceiver, IntentFilter(UNPUBLISH_LIVE_CARD))
             registerReceiver(broadcastReceiver, IntentFilter(MESSAGE))
+            registerReceiver(broadcastReceiver, IntentFilter(STATUS_MESSAGE))
 
             thread {
                 acceptThread.start()
@@ -74,22 +73,35 @@ class LiveCardService : Service() {
 
     companion object {
         const val MESSAGE = "message"
+        const val STATUS_MESSAGE = "statusMessage"
         private const val LIVE_CARD_TAG = "LiveCardService"
     }
 
-    private fun processMessage(message: String) {
-        Log.v(LIVE_CARD_TAG, "processMessage: $message")
+    private fun processMessage(receivedMessage: String) {
+        val message = messageToEchoNotification(receivedMessage)
+        remoteViews.setImageViewBitmap(R.id.ivAppIcon, message.appIcon)
+        remoteViews.setTextViewText(R.id.tvAppName, message.appName)
+        remoteViews.setTextViewText(R.id.tvTitle, message.title)
+        remoteViews.setTextViewText(R.id.tvText, message.text)
+
+        liveCard?.setViews(remoteViews)
+        liveCard?.navigate()
+    }
+
+    private fun processStatusMessage(message: String) {
+        Log.v(LIVE_CARD_TAG, "processStatusMessage: $message")
 
         val audio =
             this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audio.playSoundEffect(13)
 
-        remoteViews.setTextViewText(R.id.tvTempo, message)
+        remoteViews.setTextViewText(R.id.tvText, message)
         liveCard?.setViews(remoteViews)
+        liveCard?.navigate()
     }
 
     private fun startConnecting() {
-        remoteViews.setTextViewText(R.id.tvTempo, "GlassEcho\nStatus: Connecting")
+        remoteViews.setTextViewText(R.id.tvText, "GlassEcho\nStatus: Connecting")
         liveCard?.setViews(remoteViews)
 
         thread {
@@ -100,6 +112,7 @@ class LiveCardService : Service() {
 
     inner class MyBroadcastReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            Log.v("BroadcastReceiver", "Received")
             intent?.let { it ->
                 when (it.action) {
                     CONNECT -> {
@@ -110,6 +123,9 @@ class LiveCardService : Service() {
                     }
                     MESSAGE -> {
                         processMessage(it.getStringExtra(MESSAGE))
+                    }
+                    STATUS_MESSAGE -> {
+                        processStatusMessage(it.getStringExtra(STATUS_MESSAGE))
                     }
                     else -> {
                         // Do nothing. Unsupported.
@@ -147,8 +163,8 @@ class LiveCardService : Service() {
             Log.v(TAG, "Connected: " + bluetoothSocket.isConnected)
 
             Intent().also { intent ->
-                intent.action = MESSAGE
-                intent.putExtra(MESSAGE, "GlassEcho\nStatus: Connected")
+                intent.action = STATUS_MESSAGE
+                intent.putExtra(STATUS_MESSAGE, "GlassEcho\nStatus: Connected")
                 sendBroadcast(intent)
             }
 
@@ -166,8 +182,6 @@ class LiveCardService : Service() {
                         intent.putExtra(MESSAGE, incomingMessage)
                         sendBroadcast(intent)
                     }
-
-//                    UiThreadStatement.runOnUiThread(Runnable { view_data.setText(incomingMessage) })
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)
                     break
