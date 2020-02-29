@@ -81,6 +81,10 @@ class LiveCardService : Service() {
     }
 
     private fun processMessage(receivedMessage: String) {
+        val audio =
+            this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audio.playSoundEffect(GLASS_SOUND_TAP)
+
         val message = messageToEchoNotification(receivedMessage)
         remoteViews.setImageViewBitmap(R.id.ivAppIcon, message.appIcon)
         remoteViews.setTextViewText(R.id.tvAppName, message.appName)
@@ -96,7 +100,7 @@ class LiveCardService : Service() {
 
         val audio =
             this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audio.playSoundEffect(13)
+        audio.playSoundEffect(GLASS_SOUND_SUCCESS)
 
         remoteViews.setTextViewText(R.id.tvText, message)
         liveCard?.setViews(remoteViews)
