@@ -18,7 +18,7 @@ fun echoNotificationToString(echoNotification: EchoNotification): String {
     val sb = StringBuilder()
 
     val appIconBitmap = echoNotification.appIcon
-    val appIcon = bitmapToString(appIconBitmap)!!
+    val appIcon = bitmapToString(appIconBitmap)
 
     sb.append(NOTIFICATION_APP_ICON)
     sb.append(appIcon.length)
@@ -43,9 +43,9 @@ fun echoNotificationToString(echoNotification: EchoNotification): String {
     return sb.toString()
 }
 
-private fun bitmapToString(bitmap: Bitmap): String? {
+private fun bitmapToString(bitmap: Bitmap): String {
     val baos = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
+    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
     val b: ByteArray = baos.toByteArray()
     return Base64.encodeToString(b, Base64.DEFAULT)
 }

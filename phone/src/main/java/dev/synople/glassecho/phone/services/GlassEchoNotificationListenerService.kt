@@ -15,6 +15,9 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import dev.synople.glassecho.common.APP_ICON_SIZE
+import dev.synople.glassecho.common.CHUNK_SIZE
+import dev.synople.glassecho.common.NOTIFICATION
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.common.models.echoNotificationToString
@@ -59,12 +62,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
         sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
         runBlocking {
-            getGlass()?.let {
-                glass = it
-                Log.v(TAG, "Got Glass")
-            } ?: run {
-                Log.e(TAG, "Couldn't connect to Glass")
-            }
+            getGlass()
         }
         return Service.START_STICKY
     }
@@ -99,18 +97,14 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         }
 
         if (!::glass.isInitialized) {
-            getGlass()?.let {
-                glass = it
-                Log.v(TAG, "Got Glass")
-            } ?: run {
-                Log.e(TAG, "Couldn't connect to Glass")
-            }
+            getGlass()
         }
         Log.v("NotificationPosted", "Notif")
 
         if (sharedPref.getBoolean(sbn?.packageName, false)) {
             sbn?.notification?.let {
-                val appIcon = getBitmapFromDrawable(packageManager.getApplicationIcon(sbn.packageName))
+                val appIcon =
+                    getBitmapFromDrawable(packageManager.getApplicationIcon(sbn.packageName))
                 val appName = packageManager.getApplicationLabel(
                     packageManager.getApplicationInfo(
                         sbn.packageName,
@@ -133,7 +127,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         val canvas = Canvas(bmp)
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
-        return Bitmap.createScaledBitmap(bmp, 20, 20, false)
+        return Bitmap.createScaledBitmap(bmp, APP_ICON_SIZE, APP_ICON_SIZE, false)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
@@ -141,7 +135,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
     }
 
     // TODO: Retrieve from SharedPref since there could be multiple Glass connected
-    private fun getGlass(): ConnectedThread? {
+    private fun getGlass() {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         bluetoothAdapter.bondedDevices.forEach {
             if (it.name.contains("Glass")) {
@@ -157,15 +151,14 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                     }
                     Log.e(TAG, "socket.connect() failed", e)
                 }
-                val thread = ConnectedThread(socket)
-                thread.start()
-                return thread
+                glass = ConnectedThread(socket)
+                glass.start()
+                return
             }
         }
-        return null
     }
 
-    class ConnectedThread(private val bluetoothSocket: BluetoothSocket) : Thread() {
+    inner class ConnectedThread(private val bluetoothSocket: BluetoothSocket) : Thread() {
         private val TAG = "ConnectedThread"
         private var inputStream: InputStream = bluetoothSocket.inputStream
         private var outputStream: OutputStream = bluetoothSocket.outputStream
@@ -186,13 +179,51 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 //                    UiThreadStatement.runOnUiThread(Runnable { view_data.setText(incomingMessage) })
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)
+
+                    // Connection probably broke
+                    stopForeground(true)
+                    stopSelf()
+                    cancel()
                     break
                 }
             }
         }
 
         fun write(echoNotification: EchoNotification) {
-            write(echoNotificationToString(echoNotification).toByteArray())
+            val byteArray = echoNotificationToString(echoNotification).toByteArray()
+
+            // Attach indices and meta info to string.
+
+            val chunkedByteArray = mutableListOf<ByteArray>()
+
+            if (byteArray.size > CHUNK_SIZE) {
+                for (i in 0 until byteArray.size - CHUNK_SIZE step CHUNK_SIZE) {
+                    chunkedByteArray.add(byteArray.copyOfRange(i, i + CHUNK_SIZE))
+                }
+                chunkedByteArray.add(
+                    byteArray.copyOfRange(
+                        byteArray.size - (byteArray.size % CHUNK_SIZE),
+                        byteArray.size
+                    )
+                )
+            } else {
+                chunkedByteArray.add(byteArray)
+            }
+
+            // TODO: Remove sanity check
+            var totalSize = 0
+            chunkedByteArray.forEach { totalSize += it.size }
+            Log.v("CHUNK?", "$totalSize ${chunkedByteArray.size} ${byteArray.size}")
+            Log.v("CHUNK", "${totalSize == byteArray.size}")
+
+            // Write meta information
+            val meta = NOTIFICATION + chunkedByteArray.size
+            write(meta.toByteArray())
+
+            chunkedByteArray.forEach {
+                write(it)
+            }
+//            write(echoNotificationToString(echoNotification).toByteArray())
         }
 
         private fun write(bytes: ByteArray?) {

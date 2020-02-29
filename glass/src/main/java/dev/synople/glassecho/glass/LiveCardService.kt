@@ -67,6 +67,9 @@ class LiveCardService : Service() {
             liveCard!!.unpublish()
             liveCard = null
         }
+
+        acceptThread.cancel()
+
         unregisterReceiver(broadcastReceiver)
         super.onDestroy()
     }
@@ -137,17 +140,24 @@ class LiveCardService : Service() {
 
     inner class AcceptThread() : Thread() {
         private val TAG = "AcceptThread"
+        private lateinit var connectedThread: ConnectedThread
+
+
         override fun run() {
             try {
                 val bluetoothServerSocket = BluetoothAdapter.getDefaultAdapter()
                     .listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
 
                 val socket = bluetoothServerSocket.accept()
-                val connectedThread = ConnectedThread(socket)
+                connectedThread = ConnectedThread(socket)
                 connectedThread.start()
             } catch (e: IOException) {
                 Log.e(TAG, "Failed to accept", e)
             }
+        }
+
+        fun cancel() {
+            connectedThread.cancel()
         }
     }
 
@@ -155,6 +165,9 @@ class LiveCardService : Service() {
         private val TAG = "ConnectedThread"
         private var inputStream: InputStream = bluetoothSocket.inputStream
         private var outputStream: OutputStream = bluetoothSocket.outputStream
+
+        private var chunks = mutableListOf<String>()
+        private var numChunks = -1
 
         override fun run() {
             val buffer = ByteArray(1024)
@@ -177,10 +190,22 @@ class LiveCardService : Service() {
                     val incomingMessage = String(buffer, 0, bytes)
                     Log.v(TAG, "incomingMessage: $incomingMessage")
 
-                    Intent().also { intent ->
-                        intent.action = MESSAGE
-                        intent.putExtra(MESSAGE, incomingMessage)
-                        sendBroadcast(intent)
+                    if (incomingMessage.startsWith(NOTIFICATION)) {
+                        numChunks = incomingMessage.substring(NOTIFICATION.length).toInt()
+                    } else {
+                        chunks.add(incomingMessage)
+
+                        if (chunks.size == numChunks) {
+                            // TODO: Construct message
+                            val message = chunks.joinToString(separator = "")
+                            Intent().also { intent ->
+                                intent.action = MESSAGE
+                                intent.putExtra(MESSAGE, message)
+                                sendBroadcast(intent)
+                            }
+                            chunks.clear()
+                            numChunks = -1
+                        }
                     }
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)
