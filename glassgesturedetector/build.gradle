@@ -1,0 +1,22 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 29
+
+    defaultConfig {
+        minSdkVersion 27
+        targetSdkVersion 29
+        versionCode 1
+        versionName "1.0.0"
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    testImplementation 'junit:junit:4.13'
+    testImplementation 'org.robolectric:robolectric:4.1'
+}
+
+sourceCompatibility = "7"
+targetCompatibility = "7"
