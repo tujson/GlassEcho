@@ -17,6 +17,8 @@ package dev.synople.glassecho.glassgesturedetector
 
 import android.view.GestureDetector
 import android.view.MotionEvent
+import kotlin.math.abs
+import kotlin.math.tan
 
 /**
  * Gesture detector for Google Glass usage purposes.
@@ -110,10 +112,10 @@ class GlassGestureDetector(
         velocityX: Float,
         velocityY: Float
     ): Boolean {
-        val deltaX: Float = e2.getX() - e1.getX()
-        val deltaY: Float = e2.getY() - e1.getY()
+        val deltaX: Float = e2.x - e1.x
+        val deltaY: Float = e2.y - e1.y
         val tan =
-            (if (deltaX != 0f) Math.abs(deltaY / deltaX) else Double.MAX_VALUE).toDouble()
+            if (deltaX != 0f) abs(deltaY / deltaX).toDouble() else Double.MAX_VALUE
         return if (tan > TAN_ANGLE_DEGREES) {
             if (Math.abs(deltaY) < SWIPE_DISTANCE_THRESHOLD_PX || Math.abs(
                     velocityY
@@ -143,7 +145,7 @@ class GlassGestureDetector(
         const val SWIPE_DISTANCE_THRESHOLD_PX = 100
         const val SWIPE_VELOCITY_THRESHOLD_PX = 100
         private val TAN_ANGLE_DEGREES =
-            Math.tan(Math.toRadians(60.0))
+            tan(Math.toRadians(60.0))
     }
 
 }
