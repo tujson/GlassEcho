@@ -29,7 +29,7 @@ class LiveCardService : Service() {
     private var liveCard: LiveCard? = null
     private lateinit var remoteViews: RemoteViews
     private lateinit var broadcastReceiver: BroadcastReceiver
-    private val acceptThread = AcceptThread()
+    private var acceptThread = AcceptThread()
 
     override fun onBind(intent: Intent): IBinder? {
         return null
@@ -113,9 +113,9 @@ class LiveCardService : Service() {
         liveCard?.setViews(remoteViews)
 
         thread {
-            if (!acceptThread.isAlive) {
-                acceptThread.start()
-            }
+            acceptThread.cancel()
+            acceptThread = AcceptThread()
+            acceptThread.start()
         }
     }
 
@@ -146,8 +146,7 @@ class LiveCardService : Service() {
 
     inner class AcceptThread() : Thread() {
         private val TAG = "AcceptThread"
-        private lateinit var connectedThread: ConnectedThread
-
+        private var connectedThread: ConnectedThread? = null
 
         override fun run() {
             try {
@@ -156,14 +155,14 @@ class LiveCardService : Service() {
 
                 val socket = bluetoothServerSocket.accept()
                 connectedThread = ConnectedThread(socket)
-                connectedThread.start()
+                connectedThread?.start()
             } catch (e: IOException) {
                 Log.e(TAG, "Failed to accept", e)
             }
         }
 
         fun cancel() {
-            connectedThread.cancel()
+            connectedThread?.cancel()
         }
     }
 
@@ -215,9 +214,15 @@ class LiveCardService : Service() {
                     }
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)
+                    connectionClosed()
                     break
                 }
             }
+        }
+
+        private fun connectionClosed() {
+            this.cancel()
+            startConnecting()
         }
 
         fun write(bytes: ByteArray?) {
