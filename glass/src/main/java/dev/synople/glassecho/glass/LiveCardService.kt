@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
 import android.media.AudioManager
 import android.os.IBinder
 import android.util.Log
@@ -109,6 +110,9 @@ class LiveCardService : Service() {
     }
 
     private fun startConnecting() {
+        remoteViews.setImageViewBitmap(R.id.ivAppIcon, Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888))
+        remoteViews.setTextViewText(R.id.tvAppName, "")
+        remoteViews.setTextViewText(R.id.tvTitle, "")
         remoteViews.setTextViewText(R.id.tvText, "GlassEcho\nStatus: Connecting")
         liveCard?.setViews(remoteViews)
 
