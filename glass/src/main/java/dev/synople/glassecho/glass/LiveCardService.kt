@@ -20,6 +20,7 @@ import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.NullPointerException
 import java.nio.charset.Charset
 import kotlin.concurrent.thread
 
@@ -54,7 +55,7 @@ class LiveCardService : Service() {
             registerReceiver(broadcastReceiver, IntentFilter(STATUS_MESSAGE))
 
             thread {
-                acceptThread.start()
+                startConnecting()
             }
         } else {
             liveCard!!.navigate()
@@ -112,8 +113,9 @@ class LiveCardService : Service() {
         liveCard?.setViews(remoteViews)
 
         thread {
-            val acceptThread = AcceptThread()
-            acceptThread.start()
+            if (!acceptThread.isAlive) {
+                acceptThread.start()
+            }
         }
     }
 
