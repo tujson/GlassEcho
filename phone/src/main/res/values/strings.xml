@@ -1,7 +1,0 @@
-<resources>
-    <string name="app_name">GlassEcho - Phone</string>
-    <string name="service_name">GlassEcho Notification Listener</string>
-
-    <string name="notification_title">GlassEcho</string>
-    <string name="notification_message">Echoing notifications</string>
-</resources>

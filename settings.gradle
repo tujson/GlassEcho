@@ -1,4 +1,3 @@
 rootProject.name='GlassEcho'
-include ':phone'
 include ':glass'
 include ':common'
