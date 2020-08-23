@@ -1,8 +1,7 @@
 package dev.synople.glassecho.glass
 
 import android.app.*
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothSocket
+import android.bluetooth.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -21,7 +20,6 @@ import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.NullPointerException
 import java.nio.charset.Charset
 import kotlin.concurrent.thread
 
@@ -110,7 +108,10 @@ class LiveCardService : Service() {
     }
 
     private fun startConnecting() {
-        remoteViews.setImageViewBitmap(R.id.ivAppIcon, Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888))
+        remoteViews.setImageViewBitmap(
+            R.id.ivAppIcon,
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        )
         remoteViews.setTextViewText(R.id.tvAppName, "")
         remoteViews.setTextViewText(R.id.tvTitle, "")
         remoteViews.setTextViewText(R.id.tvText, "GlassEcho\nStatus: Connecting")
@@ -153,13 +154,27 @@ class LiveCardService : Service() {
         private var connectedThread: ConnectedThread? = null
 
         override fun run() {
-            try {
-                val bluetoothServerSocket = BluetoothAdapter.getDefaultAdapter()
-                    .listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
 
-                val socket = bluetoothServerSocket.accept()
-                connectedThread = ConnectedThread(socket)
-                connectedThread?.start()
+            // Primary service UUID - 7905F431-B5CE-4E99-A40F-4B1E122D00D0
+            // Notification source - 9FBF120D-6301-42D9-8C58-25E699A21DBD
+            // Control point - 69D1D8F3-45E1-49A8-9821-9BBDFDAAD9D9
+            // Data source - 22EAC6E9-24D6-4BB5-BE44-B36ACE7C7BFB
+            try {
+                val adapter = BluetoothAdapter.getDefaultAdapter()
+                val device = adapter.bondedDevices.first()
+                Log.v(TAG, "Device: ${device.name}")
+                val parser = ANCSParser(applicationContext)
+                parser.addNotificationListener(object: ANCSParser.NotificationListener{
+                    override fun onNotificationAdd(n: IOSNotification?) {
+                        Log.v(TAG, "iOS notification added: ${n?.title}\n${n?.subtitle}\n${n?.message}")
+                    }
+
+                    override fun onNotificationRemove(uid: Int) {
+                        Log.v(TAG, "iOS notification removed $uid")
+                    }
+                })
+                device.connectGatt(applicationContext, true, ANCSGattCallback(parser))
+
             } catch (e: IOException) {
                 Log.e(TAG, "Failed to accept", e)
             }
