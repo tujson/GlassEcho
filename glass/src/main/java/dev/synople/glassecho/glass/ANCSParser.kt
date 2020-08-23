@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGattService
 import android.content.Context
 import android.os.Handler
 import android.os.Message
+import android.util.Log
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.*
@@ -13,9 +14,9 @@ import kotlin.experimental.and
 import kotlin.experimental.or
 
 class ANCSParser(var mContext: Context) {
+    private val TAG = "ANCSParser"
     private val pendingNotifications: MutableList<ANCSData> = LinkedList()
     private val notificationHandler: Handler
-
 
     private var ancs: BluetoothGattService? = null
     private var gatt: BluetoothGatt? = null
@@ -24,7 +25,7 @@ class ANCSParser(var mContext: Context) {
     private var currData: ANCSData? = null
 
     interface NotificationListener {
-        fun onNotificationAdd(n: IOSNotification?)
+        fun onNotificationAdd(notif: IOSNotification?)
         fun onNotificationRemove(uid: Int)
     }
 
@@ -38,14 +39,14 @@ class ANCSParser(var mContext: Context) {
     }
 
     private fun sendNotification(notif: IOSNotification) {
-        IOSNotification.log("[Add Notification] : " + notif.uid)
+        Log.v(TAG, "Add Notification: ${notif.uid}")
         for (lis in notificationListeners) {
             lis.onNotificationAdd(notif)
         }
     }
 
     private fun cancelNotification(uid: Int) {
-        IOSNotification.log("[cancel Notification] : $uid")
+        Log.v(TAG, "Cancel notification: $uid")
         for (lis in notificationListeners) {
             lis.onNotificationRemove(uid)
         }
@@ -59,7 +60,7 @@ class ANCSParser(var mContext: Context) {
         var curStep = 0
 
         var bout: ByteArrayOutputStream? = null
-        var noti: IOSNotification
+        var notif: IOSNotification
         fun clear() {
             if (bout != null) {
                 bout!!.reset()
@@ -83,26 +84,26 @@ class ANCSParser(var mContext: Context) {
             }
             val cmdId = data[0].toInt()
             if (cmdId != 0) {
-                IOSNotification.log("bad cmdId: $cmdId")
+                Log.e(TAG, "Bad cmdId: $cmdId")
                 return
             }
             val uid = (0xff and data[4].toInt() shl 24 or (0xff and data[3]
                 .toInt() shl 16)
                     or (0xff and data[2].toInt() shl 8) or (0xff and data[1].toInt()))
             if (uid != currData!!.uID) {
-                IOSNotification.log("bad uid: " + uid + " -> " + currData!!.uID)
+                Log.e(TAG, "Bad UID: $uid -> ${currData!!.uID}")
                 return
             }
 
             // read attributes
-            noti.uid = uid
+            notif.uid = uid
             var curIdx = 5
             while (true) {
-                if (noti.isAllInit) {
+                if (notif.isAllInit) {
                     break
                 }
                 if (data.size < curIdx + 3) {
-                    return
+                    break
                 }
                 // attributes head
                 val attrId = data[curIdx].toInt()
@@ -110,32 +111,38 @@ class ANCSParser(var mContext: Context) {
                     (data[curIdx + 1] and 0xFF.toByte() or (0xFF.toByte() and (data[curIdx + 2].toInt() shl 8).toByte())).toInt()
                 curIdx += 3
                 if (data.size < curIdx + attrLen) {
-                    return
+                    break
                 }
-                val `val` = String(data, curIdx, attrLen)
-                if (attrId == NotificationAttributeIDTitle) {
-                    noti.title = `val`
-                } else if (attrId == NotificationAttributeIDMessage) {
-                    noti.message = `val`
-                } else if (attrId == NotificationAttributeIDDate) {
-                    noti.date = `val`
-                } else if (attrId == NotificationAttributeIDSubtitle) {
-                    noti.subtitle = `val`
-                } else if (attrId == NotificationAttributeIDMessageSize) {
-                    noti.messageSize = `val`
+                val value = String(data, curIdx, attrLen)
+                when (attrId) {
+                    NotificationAttributeIDTitle -> {
+                        notif.title = value
+                    }
+                    NotificationAttributeIDMessage -> {
+                        notif.message = value
+                    }
+                    NotificationAttributeIDDate -> {
+                        notif.date = value
+                    }
+                    NotificationAttributeIDSubtitle -> {
+                        notif.subtitle = value
+                    }
+                    NotificationAttributeIDMessageSize -> {
+                        notif.messageSize = value
+                    }
                 }
                 curIdx += attrLen
             }
-            IOSNotification.log("got a notification! data size = " + data.size)
+            Log.v(TAG, "Notification data size: ${data.size}")
             currData = null
             //			mHandler.sendEmptyMessage(MSG_DO_NOTIFICATION); // continue next!
-            sendNotification(noti)
+            sendNotification(notif)
         }
 
         init {
             curStep = 0
             timeExpired = System.currentTimeMillis()
-            noti = IOSNotification()
+            notif = IOSNotification()
         }
     }
 
@@ -147,14 +154,14 @@ class ANCSParser(var mContext: Context) {
                 return
             }
             currData = pendingNotifications.removeAt(0)
-            IOSNotification.log("ANCS New CurData")
+            Log.v(TAG, "ANCS New currData")
         } else if (currData!!.curStep == 0) { // parse notify data
             do {
                 if (currData!!.notifyData == null
                     || currData!!.notifyData!!.size != 8
                 ) {
                     currData = null // ignore
-                    IOSNotification.logw("ANCS Bad Head!")
+                    Log.e(TAG, "ANCS Bad head!")
                     break
                 }
                 if (EventIDNotificationRemoved == currData!!.notifyData!![0].toInt()) {
@@ -168,7 +175,7 @@ class ANCSParser(var mContext: Context) {
                 }
                 if (EventIDNotificationAdded != currData!!.notifyData!![0].toInt()) {
                     currData = null // ignore
-                    IOSNotification.logw("ANCS NOT Add!")
+                    Log.e(TAG, "ANCS not add")
                     break
                 }
                 // get attribute if needed!
@@ -205,8 +212,9 @@ class ANCSParser(var mContext: Context) {
                     bout.write(0)
                     val data = bout.toByteArray()
                     cha.value = data
-                    IOSNotification.log(
-                        "request ANCS(CP) the data of Notification. ？= "
+                    Log.v(
+                        TAG,
+                        "Requesting from ANCS Control Plane notification data. ？= "
                                 + gatt!!.writeCharacteristic(cha)
                     )
                     currData!!.curStep = 1
@@ -216,7 +224,7 @@ class ANCSParser(var mContext: Context) {
 //					mHandler.sendEmptyMessageDelayed(MSG_CHECK_TIME, TIMEOUT);
                     return
                 } else {
-                    IOSNotification.logw("ANCS has No Control Point !")
+                    Log.e(TAG, "ANCS Control Point not found!")
                     // has no control!// just vibrate ...
                     currData!!.bout = null
                     currData!!.curStep = 1
@@ -224,7 +232,7 @@ class ANCSParser(var mContext: Context) {
             } while (false)
         } else if (currData!!.curStep == 1) {
             // check if finished!
-            currData!!.finish();
+            currData!!.finish()
             return
         } else {
             return
@@ -234,7 +242,7 @@ class ANCSParser(var mContext: Context) {
 
     fun onDSNotification(data: ByteArray?) {
         if (currData == null) {
-            IOSNotification.logw("got ds notify without cur data")
+            Log.e(TAG, "Received Data Source notification without currData.")
             return
         }
         try {
@@ -242,23 +250,23 @@ class ANCSParser(var mContext: Context) {
             currData!!.bout!!.write(data)
             notificationHandler.sendEmptyMessageDelayed(MSG_FINISH, FINISH_DELAY.toLong())
         } catch (e: IOException) {
-            IOSNotification.loge(e.toString())
+            Log.e(TAG, "Data Source Notification handling", e)
         }
     }
 
     fun onWrite(characteristic: BluetoothGattCharacteristic?, status: Int) {
         if (status != BluetoothGatt.GATT_SUCCESS) {
-            IOSNotification.log("write err: $status")
+            Log.e(TAG, "onWrite error $status")
             notificationHandler.sendEmptyMessage(MSG_ERR)
         } else {
-            IOSNotification.log("write OK")
+            Log.v(TAG, "onWrite OK")
             notificationHandler.sendEmptyMessage(MSG_DO_NOTIFICATION)
         }
     }
 
     fun onNotification(data: ByteArray?) {
         if (data == null || data.size != 8) {
-            IOSNotification.loge("bad ANCS notification data")
+            Log.e(TAG, "ANCS Bad notification data format")
             return
         }
         logD(data)
@@ -277,7 +285,7 @@ class ANCSParser(var mContext: Context) {
         for (i in 0 until len) {
             sb.append(d[i].toString() + ", ")
         }
-        IOSNotification.log("log Data size[$len] : $sb")
+        Log.v(TAG, "log Data size[$len] : $sb")
     }
 
     companion object {
@@ -344,7 +352,7 @@ class ANCSParser(var mContext: Context) {
                         return
                     }
                     if (System.currentTimeMillis() >= currData!!.timeExpired) {
-                        IOSNotification.loge("msg timeout!")
+                        Log.v(TAG, "Message timeout!")
                     }
                 } else if (MSG_ADD_NOTIFICATION == what) {
                     pendingNotifications.add(ANCSData(msg.obj as ByteArray))
@@ -358,14 +366,14 @@ class ANCSParser(var mContext: Context) {
                     this.removeMessages(MSG_ERR)
                     pendingNotifications.clear()
                     currData = null
-                    IOSNotification.log("ANCSHandler reset")
+                    Log.v(TAG, "ANCSHandler reset")
                 } else if (MSG_ERR == what) {
-                    IOSNotification.log("error, skip curr data")
+                    Log.e(TAG, "error, skip curr data")
                     currData!!.clear()
                     currData = null
                     this.sendEmptyMessage(MSG_DO_NOTIFICATION)
                 } else if (MSG_FINISH == what) {
-                    IOSNotification.log("msg data.finish()")
+                    Log.v(TAG, "msg data.finish()")
                     if (null != currData) currData!!.finish()
                 }
             }

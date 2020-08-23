@@ -14,13 +14,10 @@ import android.widget.RemoteViews
 import com.google.android.glass.timeline.LiveCard
 import com.google.android.glass.timeline.LiveCard.PublishMode
 import dev.synople.glassecho.common.*
-import dev.synople.glassecho.common.models.messageToEchoNotification
+import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.CONNECT
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE_CARD
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
-import java.nio.charset.Charset
 import kotlin.concurrent.thread
 
 class LiveCardService : Service() {
@@ -28,7 +25,26 @@ class LiveCardService : Service() {
     private var liveCard: LiveCard? = null
     private lateinit var remoteViews: RemoteViews
     private lateinit var broadcastReceiver: BroadcastReceiver
-    private var acceptThread = AcceptThread()
+    private val notifListener: ANCSParser.NotificationListener =
+        object : ANCSParser.NotificationListener {
+            override fun onNotificationAdd(notif: IOSNotification?) {
+                Log.v(
+                    "GlassEcho",
+                    "iOS notification added: ${notif?.title}\n${notif?.subtitle}\n${notif?.message}"
+                )
+                Intent().also { intent ->
+                    intent.action = MESSAGE
+                    intent.putExtra(MESSAGE, notif)
+                    sendBroadcast(intent)
+                }
+            }
+
+            // TODO: Implement
+            override fun onNotificationRemove(uid: Int) {
+                Log.v("GlassEcho", "iOS notification removed $uid")
+            }
+        }
+    private var acceptThread = AcceptThread(notifListener)
 
     override fun onBind(intent: Intent): IBinder? {
         return null
@@ -68,28 +84,18 @@ class LiveCardService : Service() {
             liveCard = null
         }
 
-        acceptThread.cancel()
-
         unregisterReceiver(broadcastReceiver)
         super.onDestroy()
     }
 
-    companion object {
-        const val MESSAGE = "message"
-        const val STATUS_MESSAGE = "statusMessage"
-        private const val LIVE_CARD_TAG = "LiveCardService"
-    }
-
-    private fun processMessage(receivedMessage: String) {
+    private fun processMessage(notif: IOSNotification) {
         val audio =
             this.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audio.playSoundEffect(GLASS_SOUND_TAP)
 
-        val message = messageToEchoNotification(receivedMessage)
-        remoteViews.setImageViewBitmap(R.id.ivAppIcon, message.appIcon)
-        remoteViews.setTextViewText(R.id.tvAppName, message.appName)
-        remoteViews.setTextViewText(R.id.tvTitle, message.title)
-        remoteViews.setTextViewText(R.id.tvText, message.text)
+        remoteViews.setTextViewText(R.id.tvAppName, notif.date)
+        remoteViews.setTextViewText(R.id.tvTitle, notif.title)
+        remoteViews.setTextViewText(R.id.tvText, notif.message)
 
         liveCard?.setViews(remoteViews)
         liveCard?.navigate()
@@ -118,8 +124,7 @@ class LiveCardService : Service() {
         liveCard?.setViews(remoteViews)
 
         thread {
-            acceptThread.cancel()
-            acceptThread = AcceptThread()
+            acceptThread = AcceptThread(notifListener)
             acceptThread.start()
         }
     }
@@ -136,7 +141,7 @@ class LiveCardService : Service() {
                         onDestroy()
                     }
                     MESSAGE -> {
-                        processMessage(it.getStringExtra(MESSAGE))
+                        processMessage(it.getParcelableExtra<IOSNotification>(MESSAGE))
                     }
                     STATUS_MESSAGE -> {
                         processStatusMessage(it.getStringExtra(STATUS_MESSAGE))
@@ -149,117 +154,28 @@ class LiveCardService : Service() {
         }
     }
 
-    inner class AcceptThread() : Thread() {
+    inner class AcceptThread(private val notifListener: ANCSParser.NotificationListener) :
+        Thread() {
         private val TAG = "AcceptThread"
-        private var connectedThread: ConnectedThread? = null
 
         override fun run() {
-
-            // Primary service UUID - 7905F431-B5CE-4E99-A40F-4B1E122D00D0
-            // Notification source - 9FBF120D-6301-42D9-8C58-25E699A21DBD
-            // Control point - 69D1D8F3-45E1-49A8-9821-9BBDFDAAD9D9
-            // Data source - 22EAC6E9-24D6-4BB5-BE44-B36ACE7C7BFB
             try {
                 val adapter = BluetoothAdapter.getDefaultAdapter()
                 val device = adapter.bondedDevices.first()
-                Log.v(TAG, "Device: ${device.name}")
+                Log.v(TAG, "Connected to ${device.name}")
+
                 val parser = ANCSParser(applicationContext)
-                parser.addNotificationListener(object: ANCSParser.NotificationListener{
-                    override fun onNotificationAdd(n: IOSNotification?) {
-                        Log.v(TAG, "iOS notification added: ${n?.title}\n${n?.subtitle}\n${n?.message}")
-                    }
-
-                    override fun onNotificationRemove(uid: Int) {
-                        Log.v(TAG, "iOS notification removed $uid")
-                    }
-                })
+                parser.addNotificationListener(notifListener)
                 device.connectGatt(applicationContext, true, ANCSGattCallback(parser))
-
             } catch (e: IOException) {
                 Log.e(TAG, "Failed to accept", e)
             }
         }
-
-        fun cancel() {
-            connectedThread?.cancel()
-        }
     }
 
-    inner class ConnectedThread(private val bluetoothSocket: BluetoothSocket) : Thread() {
-        private val TAG = "ConnectedThread"
-        private var inputStream: InputStream = bluetoothSocket.inputStream
-        private var outputStream: OutputStream = bluetoothSocket.outputStream
-
-        private var chunks = mutableListOf<String>()
-        private var numChunks = -1
-
-        override fun run() {
-            val buffer = ByteArray(1024)
-            var bytes: Int
-
-            Log.v(TAG, "Connected: " + bluetoothSocket.isConnected)
-
-            Intent().also { intent ->
-                intent.action = STATUS_MESSAGE
-                intent.putExtra(STATUS_MESSAGE, "GlassEcho\nStatus: Connected")
-                sendBroadcast(intent)
-            }
-
-            inputStream = bluetoothSocket.inputStream
-            outputStream = bluetoothSocket.outputStream
-
-            while (true) {
-                try {
-                    bytes = inputStream.read(buffer)
-                    val incomingMessage = String(buffer, 0, bytes)
-                    Log.v(TAG, "incomingMessage: $incomingMessage")
-
-                    if (incomingMessage.startsWith(NOTIFICATION)) {
-                        numChunks = incomingMessage.substring(NOTIFICATION.length).toInt()
-                    } else {
-                        chunks.add(incomingMessage)
-
-                        if (chunks.size == numChunks) {
-                            // TODO: Construct message
-                            val message = chunks.joinToString(separator = "")
-                            Intent().also { intent ->
-                                intent.action = MESSAGE
-                                intent.putExtra(MESSAGE, message)
-                                sendBroadcast(intent)
-                            }
-                            chunks.clear()
-                            numChunks = -1
-                        }
-                    }
-                } catch (e: IOException) {
-                    Log.e(TAG, "run()", e)
-                    connectionClosed()
-                    break
-                }
-            }
-        }
-
-        private fun connectionClosed() {
-            this.cancel()
-            startConnecting()
-        }
-
-        fun write(bytes: ByteArray?) {
-            val text = String(bytes!!, Charset.defaultCharset())
-            try {
-                outputStream.write(bytes)
-            } catch (e: IOException) {
-                Log.e(TAG, "write()", e)
-            }
-        }
-
-        /* Call this from the main activity to shutdown the connection */
-        fun cancel() {
-            try {
-                bluetoothSocket.close()
-            } catch (e: IOException) {
-                Log.e(TAG, "cancel", e)
-            }
-        }
+    companion object {
+        const val MESSAGE = "message"
+        const val STATUS_MESSAGE = "statusMessage"
+        private const val LIVE_CARD_TAG = "LiveCardService"
     }
 }
