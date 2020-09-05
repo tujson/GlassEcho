@@ -110,7 +110,7 @@ class LiveCardService : Service() {
     }
 
     private fun startConnecting() {
-        remoteViews.setImageViewBitmap(R.id.ivAppIcon, Bitmap.createBitmap(0,0,Bitmap.Config.ARGB_8888))
+        remoteViews.setImageViewBitmap(R.id.ivAppIcon, Bitmap.createBitmap(1,1,Bitmap.Config.ARGB_8888))
         remoteViews.setTextViewText(R.id.tvAppName, "")
         remoteViews.setTextViewText(R.id.tvTitle, "")
         remoteViews.setTextViewText(R.id.tvText, "GlassEcho\nStatus: Connecting")
@@ -158,6 +158,7 @@ class LiveCardService : Service() {
                     .listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
 
                 val socket = bluetoothServerSocket.accept()
+                bluetoothServerSocket.close()
                 connectedThread = ConnectedThread(socket)
                 connectedThread?.start()
             } catch (e: IOException) {
