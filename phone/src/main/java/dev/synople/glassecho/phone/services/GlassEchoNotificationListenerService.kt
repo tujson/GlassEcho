@@ -45,8 +45,6 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
     private lateinit var sharedPref: SharedPreferences
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.v(TAG, "onStartCommand")
-
         createNotificationChannel()
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent ->
@@ -55,6 +53,8 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getText(R.string.notification_title))
             .setContentText(getText(R.string.notification_message))
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent)
             .build()
 
@@ -99,7 +99,6 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         if (!::glass.isInitialized) {
             getGlass()
         }
-        Log.v("NotificationPosted", "Notif")
 
         if (sharedPref.getBoolean(sbn?.packageName, false)) {
             sbn?.notification?.let {
@@ -192,8 +191,6 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         fun write(echoNotification: EchoNotification) {
             val byteArray = echoNotificationToString(echoNotification).toByteArray()
 
-            // Attach indices and meta info to string.
-
             val chunkedByteArray = mutableListOf<ByteArray>()
 
             if (byteArray.size > CHUNK_SIZE) {
@@ -210,26 +207,18 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                 chunkedByteArray.add(byteArray)
             }
 
-            // TODO: Remove sanity check
-            var totalSize = 0
-            chunkedByteArray.forEach { totalSize += it.size }
-            Log.v("CHUNK?", "$totalSize ${chunkedByteArray.size} ${byteArray.size}")
-            Log.v("CHUNK", "${totalSize == byteArray.size}")
-
-            // Write meta information
             val meta = NOTIFICATION + chunkedByteArray.size
             write(meta.toByteArray())
 
             chunkedByteArray.forEach {
                 write(it)
             }
-//            write(echoNotificationToString(echoNotification).toByteArray())
         }
 
         private fun write(bytes: ByteArray?) {
             val text = String(bytes!!, Charset.defaultCharset())
             try {
-                Log.v("ConnectedThread", "Write: $text")
+                Log.v(TAG, "Writing: $text")
                 outputStream.write(bytes)
                 outputStream.flush()
             } catch (e: IOException) {
