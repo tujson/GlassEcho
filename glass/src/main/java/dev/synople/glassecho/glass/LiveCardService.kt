@@ -110,7 +110,10 @@ class LiveCardService : Service() {
     }
 
     private fun startConnecting() {
-        remoteViews.setImageViewBitmap(R.id.ivAppIcon, Bitmap.createBitmap(1,1,Bitmap.Config.ARGB_8888))
+        remoteViews.setImageViewBitmap(
+            R.id.ivAppIcon,
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        )
         remoteViews.setTextViewText(R.id.tvAppName, "")
         remoteViews.setTextViewText(R.id.tvTitle, "")
         remoteViews.setTextViewText(R.id.tvText, "GlassEcho\nStatus: Connecting")
@@ -125,7 +128,6 @@ class LiveCardService : Service() {
 
     inner class MyBroadcastReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            Log.v("BroadcastReceiver", "Received")
             intent?.let { it ->
                 when (it.action) {
                     CONNECT -> {

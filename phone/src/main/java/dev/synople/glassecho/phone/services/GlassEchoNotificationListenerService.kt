@@ -87,6 +87,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
         sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
         glass = ConnectedThread()
+        glass?.start()
 
         return Service.START_STICKY
     }
