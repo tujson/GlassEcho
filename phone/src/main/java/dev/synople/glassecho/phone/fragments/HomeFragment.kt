@@ -26,7 +26,6 @@ class HomeFragment : Fragment() {
 
         // TODO: Only show this if Glass isn't connected. If it is connected, show basic info about Glass.
         btnConnect.setOnClickListener {
-            stopEchoService()
             startEchoService()
         }
 
@@ -39,10 +38,5 @@ class HomeFragment : Fragment() {
     private fun startEchoService() {
         val serviceIntent = Intent(context, GlassEchoNotificationListenerService::class.java)
         ContextCompat.startForegroundService(context!!, serviceIntent)
-    }
-
-    private fun stopEchoService() {
-        val serviceIntent = Intent(context, GlassEchoNotificationListenerService::class.java)
-        context!!.stopService(serviceIntent)
     }
 }

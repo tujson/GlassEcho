@@ -7,12 +7,14 @@ import android.os.Bundle
 import android.provider.Settings
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import android.text.TextUtils
+import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import dev.synople.glassecho.phone.services.GlassEchoNotificationListenerService
 
 
 class MainActivity : AppCompatActivity() {
-
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,17 +48,19 @@ class MainActivity : AppCompatActivity() {
         val alertDialogBuilder: AlertDialog.Builder = AlertDialog.Builder(this)
         alertDialogBuilder.setTitle("GlassEcho")
         alertDialogBuilder.setMessage("Needs permission.")
-        alertDialogBuilder.setPositiveButton("Yes",
-            DialogInterface.OnClickListener { _, _ ->
-                startActivity(
-                    Intent(
-                        ACTION_NOTIFICATION_LISTENER_SETTINGS
-                    )
+        alertDialogBuilder.setPositiveButton(
+            "Yes"
+        ) { _, _ ->
+            startActivity(
+                Intent(
+                    ACTION_NOTIFICATION_LISTENER_SETTINGS
                 )
-            })
-        alertDialogBuilder.setNegativeButton("No",
-            DialogInterface.OnClickListener { _, _ ->
-            })
+            )
+        }
+        alertDialogBuilder.setNegativeButton(
+            "No"
+        ) { _, _ ->
+        }
         return alertDialogBuilder.create()
     }
 

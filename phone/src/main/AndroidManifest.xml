@@ -3,6 +3,7 @@
     package="dev.synople.glassecho.phone">
 
     <uses-feature android:name="android.hardware.bluetooth" />
+
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
@@ -21,10 +22,13 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".services.GlassEchoNotificationListenerService"
+        <receiver android:name=".GlassEchoBroadcastReceiver" />
+
+        <service
+            android:name=".services.GlassEchoNotificationListenerService"
+            android:enabled="true"
             android:label="@string/service_name"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:enabled="true">
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>

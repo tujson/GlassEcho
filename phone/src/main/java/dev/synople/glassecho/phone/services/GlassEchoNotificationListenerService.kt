@@ -8,9 +8,9 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.provider.SyncStateContract
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -21,55 +21,80 @@ import dev.synople.glassecho.common.NOTIFICATION
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.common.models.echoNotificationToString
+import dev.synople.glassecho.phone.Constants
+import dev.synople.glassecho.phone.GlassEchoBroadcastReceiver
 import dev.synople.glassecho.phone.MainActivity
 import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.runBlocking
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 import java.nio.charset.Charset
 import kotlin.coroutines.CoroutineContext
 
 
 class GlassEchoNotificationListenerService : NotificationListenerService(), CoroutineScope {
     private val TAG = "GlassEchoService"
+
     private var coroutineJob = Job()
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.IO + coroutineJob
 
-    private lateinit var glass: ConnectedThread
+    private var glass: ConnectedThread? = null
     private lateinit var sharedPref: SharedPreferences
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.getStringExtra(Constants.FROM_NOTIFICATION) == Constants.NOTIFICATION_ACTION_STOP) {
+            stopSelf()
+            stopForeground(true)
+
+            return Service.START_NOT_STICKY
+        }
+
         createNotificationChannel()
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent ->
                 PendingIntent.getActivity(this, 0, notificationIntent, 0)
             }
+
+        val stopPendingIntent: PendingIntent =
+            Intent(this, GlassEchoBroadcastReceiver::class.java).let { notificationIntent ->
+                notificationIntent.putExtra(
+                    Constants.FROM_NOTIFICATION,
+                    Constants.NOTIFICATION_ACTION_STOP
+                )
+                PendingIntent.getBroadcast(
+                    this,
+                    16510,
+                    notificationIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            }
+        val stopAction =
+            NotificationCompat.Action(R.drawable.ic_stop, "Stop", stopPendingIntent)
+
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getText(R.string.notification_title))
             .setContentText(getText(R.string.notification_message))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(stopAction)
             .setContentIntent(pendingIntent)
             .build()
 
         startForeground(ONGOING_NOTIFICATION_ID, notification)
 
         sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
-        runBlocking {
-            getGlass()
-        }
+        glass = ConnectedThread()
+
         return Service.START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
         coroutineJob.cancel()
+        glass?.cancel()
     }
 
     private fun createNotificationChannel() {
@@ -89,16 +114,9 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         super.onNotificationPosted(sbn)
         Log.v(
             TAG,
-            "Content (${sbn?.packageName}): " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT).toString()
+            "Content (${sbn?.packageName}): " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT)
+                .toString()
         )
-
-        if (!::sharedPref.isInitialized) {
-            sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
-        }
-
-        if (!::glass.isInitialized) {
-            getGlass()
-        }
 
         if (sharedPref.getBoolean(sbn?.packageName, false)) {
             sbn?.notification?.let {
@@ -112,9 +130,14 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                 ).toString()
                 val title = it.extras.get(Notification.EXTRA_TITLE).toString()
                 val text = it.extras.get(Notification.EXTRA_TEXT).toString()
-                glass.write(EchoNotification(appIcon, appName, title, text))
+                glass?.write(EchoNotification(appIcon, appName, title, text))
             }
         }
+    }
+
+    // TODO: Implement
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
     }
 
     private fun getBitmapFromDrawable(drawable: Drawable): Bitmap {
@@ -129,68 +152,59 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         return Bitmap.createScaledBitmap(bmp, APP_ICON_SIZE, APP_ICON_SIZE, false)
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        super.onNotificationRemoved(sbn)
-    }
-
-    // TODO: Retrieve from SharedPref since there could be multiple Glass connected
-    private fun getGlass() {
-        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        bluetoothAdapter.bondedDevices.forEach {
-            if (it.name.contains("Glass")) {
-                Log.v(TAG, "Trying to connect to ${it.name}")
-                val socket = it.createRfcommSocketToServiceRecord(glassEchoUUID)
-                try {
-                    socket.connect()
-                } catch (e: IOException) {
-                    try {
-                        socket.close()
-                    } catch (e1: IOException) {
-                        Log.e(TAG, "socket.close() failed", e1)
-                    }
-                    Log.e(TAG, "socket.connect() failed", e)
-                }
-                glass = ConnectedThread(socket)
-                glass.start()
-                return
-            }
-        }
-    }
-
-    inner class ConnectedThread(private val bluetoothSocket: BluetoothSocket) : Thread() {
+    class ConnectedThread : Thread() {
         private val TAG = "ConnectedThread"
-        private var inputStream: InputStream = bluetoothSocket.inputStream
-        private var outputStream: OutputStream = bluetoothSocket.outputStream
+        private var bluetoothSocket: BluetoothSocket? = null
 
         override fun run() {
             val buffer = ByteArray(1024)
-            var bytes: Int
 
-            Log.v(TAG, "Connected: " + bluetoothSocket.isConnected)
-            inputStream = bluetoothSocket.inputStream
-            outputStream = bluetoothSocket.outputStream
+            bluetoothSocket = establishSocket()
 
-            while (true) {
+            while (bluetoothSocket?.isConnected == true) {
                 try {
-                    bytes = inputStream.read(buffer)
-                    val incomingMessage = String(buffer, 0, bytes)
-                    Log.v(TAG, "incomingMessage: $incomingMessage")
-//                    UiThreadStatement.runOnUiThread(Runnable { view_data.setText(incomingMessage) })
+                    bluetoothSocket?.inputStream?.let { inputStream ->
+                        val bytes = inputStream.read(buffer)
+                        val incomingMessage = String(buffer, 0, bytes)
+                        Log.v(TAG, "incomingMessage: $incomingMessage")
+                    }
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)
+                    bluetoothSocket?.close()
+                    bluetoothSocket = establishSocket()
 
-                    // Connection probably broke
-                    stopForeground(true)
-                    stopSelf()
-                    cancel()
                     break
                 }
             }
         }
 
+        private fun establishSocket(): BluetoothSocket? {
+            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+            bluetoothAdapter.bondedDevices.forEach {
+                if (it.name.contains("Glass")) {
+                    Log.v(TAG, "Trying to connect to ${it.name}")
+                    val socket = it.createRfcommSocketToServiceRecord(glassEchoUUID)
+                    try {
+                        socket.connect()
+                    } catch (e: IOException) {
+                        try {
+                            socket.close()
+                        } catch (e1: IOException) {
+                            Log.e(TAG, "socket.close() failed", e1)
+                        }
+                        Log.e(TAG, "socket.connect() failed", e)
+                    }
+
+                    if (socket.isConnected) {
+                        return socket
+                    }
+                }
+            }
+            return null
+        }
+
         fun write(echoNotification: EchoNotification) {
             val byteArray = echoNotificationToString(echoNotification).toByteArray()
-
             val chunkedByteArray = mutableListOf<ByteArray>()
 
             if (byteArray.size > CHUNK_SIZE) {
@@ -215,12 +229,14 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             }
         }
 
-        private fun write(bytes: ByteArray?) {
-            val text = String(bytes!!, Charset.defaultCharset())
+        private fun write(bytes: ByteArray) {
             try {
-                Log.v(TAG, "Writing: $text")
-                outputStream.write(bytes)
-                outputStream.flush()
+                bluetoothSocket?.outputStream?.let { outputStream ->
+                    Log.v(TAG, "Writing: ${String(bytes, Charset.defaultCharset())}")
+
+                    outputStream.write(bytes)
+                    outputStream.flush()
+                }
             } catch (e: IOException) {
                 Log.e(TAG, "write()", e)
             }
@@ -229,7 +245,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         /* Call this from the main activity to shutdown the connection */
         fun cancel() {
             try {
-                bluetoothSocket.close()
+                bluetoothSocket?.close()
             } catch (e: IOException) {
                 Log.e(TAG, "cancel", e)
             }
