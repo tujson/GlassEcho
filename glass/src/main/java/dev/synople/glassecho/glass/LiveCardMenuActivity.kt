@@ -5,6 +5,9 @@ import android.content.Intent
 import android.view.Menu
 import android.view.MenuItem
 
+const val CONNECT = "connect"
+const val UNPUBLISH_LIVE_CARD = "unpublishLiveCard"
+
 class LiveCardMenuActivity : Activity() {
 
     override fun onAttachedToWindow() {
@@ -40,10 +43,5 @@ class LiveCardMenuActivity : Activity() {
     override fun onOptionsMenuClosed(menu: Menu) {
         super.onOptionsMenuClosed(menu)
         finish()
-    }
-
-    companion object {
-        const val CONNECT = "connect"
-        const val UNPUBLISH_LIVE_CARD = "unpublishLiveCard"
     }
 }

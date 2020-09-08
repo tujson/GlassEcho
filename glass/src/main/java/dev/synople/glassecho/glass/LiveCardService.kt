@@ -20,8 +20,6 @@ import dev.synople.glassecho.common.GLASS_SOUND_TAP
 import dev.synople.glassecho.common.NOTIFICATION
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.messageToEchoNotification
-import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.CONNECT
-import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE_CARD
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
