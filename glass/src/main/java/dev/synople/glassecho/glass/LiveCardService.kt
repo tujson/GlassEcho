@@ -1,6 +1,7 @@
 package dev.synople.glassecho.glass
 
-import android.app.*
+import android.app.PendingIntent
+import android.app.Service
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothSocket
 import android.content.BroadcastReceiver
@@ -14,14 +15,16 @@ import android.util.Log
 import android.widget.RemoteViews
 import com.google.android.glass.timeline.LiveCard
 import com.google.android.glass.timeline.LiveCard.PublishMode
-import dev.synople.glassecho.common.*
+import dev.synople.glassecho.common.GLASS_SOUND_SUCCESS
+import dev.synople.glassecho.common.GLASS_SOUND_TAP
+import dev.synople.glassecho.common.NOTIFICATION
+import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.messageToEchoNotification
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.CONNECT
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE_CARD
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.NullPointerException
 import java.nio.charset.Charset
 import kotlin.concurrent.thread
 

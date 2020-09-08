@@ -5,21 +5,20 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ResolveInfo
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.CompoundButton
 import androidx.fragment.app.Fragment
 import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
 import dev.synople.glassecho.phone.adapters.NotificationAdapter
 import kotlinx.android.synthetic.main.fragment_notification_picker.*
-import java.util.*
+import java.util.Collections
 
 /**
  * Lets users pick which apps show notifications on Glass
  */
-class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picker), CompoundButton.OnCheckedChangeListener {
+class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picker),
+    CompoundButton.OnCheckedChangeListener {
 
     private lateinit var installedApps: List<ResolveInfo>
     private lateinit var adapter: NotificationAdapter
@@ -29,12 +28,13 @@ class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picke
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         installedApps = getInstalledApps()
-        sharedPref = activity?.getSharedPreferences(SHARED_PREFS,
+        sharedPref = activity?.getSharedPreferences(
+            SHARED_PREFS,
             Context.MODE_PRIVATE
         )!!
         adapter = NotificationAdapter(
             installedApps,
-            context!!.packageManager,
+            requireContext().packageManager,
             sharedPref
         ) { packageName, isChecked ->
             switchAllOn.setOnCheckedChangeListener(null)
@@ -53,7 +53,7 @@ class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picke
     }
 
     private fun getInstalledApps(): List<ResolveInfo> {
-        val pm = context!!.packageManager
+        val pm = requireContext().packageManager
         val main = Intent(Intent.ACTION_MAIN, null)
         main.addCategory(Intent.CATEGORY_LAUNCHER)
         val launchables = pm.queryIntentActivities(main, 0)

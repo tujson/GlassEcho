@@ -1,17 +1,13 @@
 package dev.synople.glassecho.phone
 
 import android.content.ComponentName
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import android.text.TextUtils
-import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import dev.synople.glassecho.phone.services.GlassEchoNotificationListenerService
 
 
 class MainActivity : AppCompatActivity() {
