@@ -19,19 +19,12 @@ import java.util.*
 /**
  * Lets users pick which apps show notifications on Glass
  */
-class NotificationPickerFragment : Fragment(), CompoundButton.OnCheckedChangeListener {
+class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picker), CompoundButton.OnCheckedChangeListener {
 
     private lateinit var installedApps: List<ResolveInfo>
     private lateinit var adapter: NotificationAdapter
 
     private lateinit var sharedPref: SharedPreferences
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ) =
-        inflater.inflate(R.layout.fragment_notification_picker, container, false)!!
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
