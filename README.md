@@ -5,13 +5,13 @@ Show Android notifications on Google Glass via Bluetooth
 ## Instructions  
 - Install the Glass app on Glass  
 - Install the Phone app on your Phone  
-- Open GlassEcho on your Phone  
-- Click "Connect"  
-	- If you've already paired Glass with your Phone via Bluetooth, click on Glass in the popup dialog.
-	- Otherwise, on Glass, navigate to Settings -> Bluetooth -> Pair new device Then click "Pair new device" on the popup dialog on your phone. Then select Glass, and wait for the prompt that'll pop up on your phone and Glass (make sure to accept these!).
-- Open GlassEcho on your Glass
-- You should hear a chime from Glass and it should say "Connected" in GlassEcho on Glass. If this isn't the case, tap on Glass while in the GlassEcho card, and select "Connect" in the options menu.
-- Glass should now indicate that it's connected! Try receiving a notification!
+- Open GlassEcho on Glass
+- Open GlassEcho on Phone
+- Click "Connect" on your Phone
+	- Click "Allow" in the popup dialog.
+	- Scan the QR code on your Phone with the GlassEcho app on Glass.
+	- If it errors while reading the QR code, simply quit out of the Glass app and try scanning again.
+- Glass should now be connected! Try sending a notification.
 
 ## Development Priorities
 - Making the pairing process easier.

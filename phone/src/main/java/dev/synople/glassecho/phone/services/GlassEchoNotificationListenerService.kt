@@ -1,11 +1,12 @@
 package dev.synople.glassecho.phone.services
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.Intent
@@ -23,7 +24,6 @@ import dev.synople.glassecho.common.CHUNK_SIZE
 import dev.synople.glassecho.common.NOTIFICATION
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
-import dev.synople.glassecho.common.models.echoNotificationToString
 import dev.synople.glassecho.phone.Constants
 import dev.synople.glassecho.phone.GlassEchoBroadcastReceiver
 import dev.synople.glassecho.phone.MainActivity
@@ -45,20 +45,36 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         get() = Dispatchers.IO + coroutineJob
 
     private var glass: ConnectedThread? = null
-    private lateinit var sharedPref: SharedPreferences
+    private var sharedPref: SharedPreferences? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val bluetoothDevice =
-            intent?.extras?.getParcelable<BluetoothDevice>(Constants.EXTRA_BLUETOOTH_DEVICE)
-
-        if (bluetoothDevice == null || intent.getStringExtra(Constants.FROM_NOTIFICATION) == Constants.NOTIFICATION_ACTION_STOP) {
+        if (intent?.getStringExtra(Constants.FROM_NOTIFICATION) == Constants.NOTIFICATION_ACTION_STOP) {
             stopSelf()
             stopForeground(true)
 
             return Service.START_NOT_STICKY
         }
+        sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
 
-        createNotificationChannel()
+        showNotification()
+
+        glass = ConnectedThread()
+        glass?.start()
+
+        return Service.START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        coroutineJob.cancel()
+        glass?.cancel()
+    }
+
+    private fun showNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createNotificationChannel()
+        }
+
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent ->
                 PendingIntent.getActivity(this, 0, notificationIntent, 0)
@@ -90,61 +106,57 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             .build()
 
         startForeground(ONGOING_NOTIFICATION_ID, notification)
-
-        sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
-        glass = ConnectedThread(bluetoothDevice)
-        glass?.start()
-
-        return Service.START_STICKY
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        coroutineJob.cancel()
-        glass?.cancel()
-    }
-
+    @SuppressLint("WrongConstant") // Android Studio is incorrectly complaining...
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                CHANNEL_ID,
-                "GlassEcho Service",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            getSystemService(NotificationManager::class.java)?.createNotificationChannel(
-                serviceChannel
-            )
-        }
+        val serviceChannel = NotificationChannel(
+            CHANNEL_ID,
+            "GlassEcho Service",
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        getSystemService(NotificationManager::class.java)?.createNotificationChannel(
+            serviceChannel
+        )
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        super.onNotificationPosted(sbn)
         Log.v(
             TAG,
             "Content (${sbn?.packageName}): " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT)
                 .toString()
         )
 
-        if (sharedPref.getBoolean(sbn?.packageName, false)) {
-            sbn?.notification?.let {
-                val appIcon =
-                    getBitmapFromDrawable(packageManager.getApplicationIcon(sbn.packageName))
-                val appName = packageManager.getApplicationLabel(
-                    packageManager.getApplicationInfo(
-                        sbn.packageName,
-                        0
-                    )
-                ).toString()
-                val title = it.extras.get(Notification.EXTRA_TITLE).toString()
-                val text = it.extras.get(Notification.EXTRA_TEXT).toString()
-                glass?.write(EchoNotification(appIcon, appName, title, text))
+        if (sharedPref?.getBoolean(sbn?.packageName, false) == true) {
+            sbn?.let {
+                glass?.write(convertNotificationToEcho(it))
             }
         }
     }
 
-    // TODO: Implement
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        super.onNotificationRemoved(sbn)
+//        if (sharedPref?.getBoolean(sbn?.packageName, false) == true) {
+//            sbn?.let {
+//                glass?.write(convertNotificationToEcho(it), isRemoved = true)
+//            }
+//        }
+    }
+
+    private fun convertNotificationToEcho(sbn: StatusBarNotification): EchoNotification {
+        val appIcon =
+            getBitmapFromDrawable(packageManager.getApplicationIcon(sbn.packageName))
+        val appName = packageManager.getApplicationLabel(
+            packageManager.getApplicationInfo(
+                sbn.packageName,
+                0
+            )
+        ).toString()
+        val title = sbn.notification.extras.get(Notification.EXTRA_TITLE).toString()
+        val text = sbn.notification.extras.get(Notification.EXTRA_TEXT).toString()
+        val largeIcon =
+            getBitmapFromDrawable(sbn.notification.getLargeIcon().loadDrawable(this))
+
+        return EchoNotification(appIcon, appName, largeIcon, title, text)
     }
 
     private fun getBitmapFromDrawable(drawable: Drawable): Bitmap {
@@ -159,7 +171,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         return Bitmap.createScaledBitmap(bmp, APP_ICON_SIZE, APP_ICON_SIZE, false)
     }
 
-    class ConnectedThread(private val bluetoothDevice: BluetoothDevice) : Thread() {
+    inner class ConnectedThread : Thread() {
         private val TAG = "ConnectedThread"
         private var bluetoothSocket: BluetoothSocket? = null
 
@@ -167,7 +179,13 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             val buffer = ByteArray(1024)
 
             bluetoothSocket = establishSocket()
+            Log.v(TAG, "bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}")
 
+            if (bluetoothSocket?.isConnected == false) {
+                bluetoothSocket?.close()
+                stopSelf()
+                stopForeground(true)
+            }
             while (bluetoothSocket?.isConnected == true) {
                 try {
                     bluetoothSocket?.inputStream?.let { inputStream ->
@@ -177,36 +195,32 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                     }
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)
+
+                    // Attempt to reconnect
                     bluetoothSocket?.close()
                     bluetoothSocket = establishSocket()
-
-                    break
                 }
             }
         }
 
         private fun establishSocket(): BluetoothSocket? {
-            val socket = bluetoothDevice.createRfcommSocketToServiceRecord(glassEchoUUID)
-            try {
-                socket.connect()
+            val serverSocket = BluetoothAdapter.getDefaultAdapter()
+                .listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
+            val socket = try {
+                serverSocket.accept()
             } catch (e: IOException) {
-                try {
-                    socket.close()
-                } catch (e1: IOException) {
-                    Log.e(TAG, "socket.close() failed", e1)
-                }
                 Log.e(TAG, "socket.connect() failed", e)
+                return null
             }
+            serverSocket.close()
 
-            return if (socket.isConnected) {
-                socket
-            } else {
-                null
-            }
+            return socket
         }
 
-        fun write(echoNotification: EchoNotification) {
-            val byteArray = echoNotificationToString(echoNotification).toByteArray()
+        fun write(echoNotification: EchoNotification, isRemoved: Boolean = false) {
+            Log.v(TAG, "Writing: ${echoNotification}")
+            val byteArray =
+                EchoNotification.echoNotificationToString(echoNotification).toByteArray()
             val chunkedByteArray = mutableListOf<ByteArray>()
 
             if (byteArray.size > CHUNK_SIZE) {

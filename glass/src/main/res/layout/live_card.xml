@@ -5,7 +5,7 @@
     android:paddingTop="10dp"
     android:paddingStart="10dp"
     android:paddingEnd="10dp"
-    tools:context=".LiveCardService">
+    tools:context=".SourceConnectionService">
 
     <ImageView
         android:id="@+id/ivAppIcon"
