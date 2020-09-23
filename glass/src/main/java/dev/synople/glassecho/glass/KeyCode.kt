@@ -1,3 +1,3 @@
 package dev.synople.glassecho.glass
 
-data class KeyEvent(val keyCode: Int)
+data class KeyCode(val keyCode: Int)

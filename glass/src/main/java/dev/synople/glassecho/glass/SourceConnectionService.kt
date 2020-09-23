@@ -13,13 +13,14 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val TAG = SourceConnectionService::class.java.simpleName
 
 class SourceConnectionService : Service() {
 
     private lateinit var bluetoothDevice: BluetoothDevice
-    private lateinit var createSocketThread: CreateSocketThread
+    private lateinit var createSocketThread: ConnectedThread
 
     override fun onBind(intent: Intent): IBinder? {
         return null
@@ -36,10 +37,11 @@ class SourceConnectionService : Service() {
     }
 
     private fun startConnecting() {
+        Log.v(TAG, "Starting to connect to ${bluetoothDevice.name}")
         if (::createSocketThread.isInitialized) {
             createSocketThread.cancel()
         }
-        createSocketThread = CreateSocketThread(bluetoothDevice)
+        createSocketThread = ConnectedThread(bluetoothDevice)
         createSocketThread.start()
     }
 
@@ -49,32 +51,11 @@ class SourceConnectionService : Service() {
         createSocketThread.cancel()
     }
 
-    inner class CreateSocketThread(private val bluetoothDevice: BluetoothDevice) : Thread() {
-        private val TAG = "AcceptThread"
-        private var connectedThread: ConnectedThread? = null
-
-        override fun run() {
-            try {
-                val socket = bluetoothDevice
-                    .createRfcommSocketToServiceRecord(glassEchoUUID)
-
-                socket.connect()
-                connectedThread = ConnectedThread(socket)
-                connectedThread?.start()
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to accept", e)
-            }
-        }
-
-        fun cancel() {
-            connectedThread?.cancel()
-        }
-    }
-
-    inner class ConnectedThread(private val bluetoothSocket: BluetoothSocket) : Thread() {
+    inner class ConnectedThread(private val bluetoothDevice: BluetoothDevice) : Thread() {
         private val TAG = "ConnectedThread"
-        private var inputStream: InputStream = bluetoothSocket.inputStream
-        private var outputStream: OutputStream = bluetoothSocket.outputStream
+        private var isRunning = AtomicBoolean(true)
+
+        private lateinit var bluetoothSocket: BluetoothSocket
 
         private var chunks = mutableListOf<String>()
         private var numChunks = -1
@@ -83,21 +64,12 @@ class SourceConnectionService : Service() {
             val buffer = ByteArray(1024)
             var bytes: Int
 
-            Log.v(TAG, "Connected: " + bluetoothSocket.isConnected)
+            var isConnected = init()
 
-            Intent().also { intent ->
-                intent.action = Constants.INTENT_FILTER_DEVICE_CONNECT_STATUS
-                intent.putExtra(Constants.EXTRA_DEVICE_IS_CONNECTED, bluetoothSocket.isConnected)
-                sendBroadcast(intent)
-            }
-
-            inputStream = bluetoothSocket.inputStream
-            outputStream = bluetoothSocket.outputStream
-
-            // TODO: Implement reconnection logic
-            while (bluetoothSocket.isConnected) {
+            while (isConnected && isRunning.get()) {
                 try {
-                    bytes = inputStream.read(buffer)
+                    bytes = bluetoothSocket.inputStream.read(buffer)
+
                     val incomingMessage = String(buffer, 0, bytes)
                     Log.v(TAG, "incomingMessage: $incomingMessage")
 
@@ -107,7 +79,6 @@ class SourceConnectionService : Service() {
                         chunks.add(incomingMessage)
 
                         if (chunks.size == numChunks) {
-                            // TODO: Construct message
                             val message = chunks.joinToString(separator = "")
                             Intent().also { intent ->
                                 intent.action = Constants.INTENT_FILTER_NOTIFICATION
@@ -122,30 +93,69 @@ class SourceConnectionService : Service() {
                         }
                     }
                 } catch (e: IOException) {
-                    Log.e(TAG, "run()", e)
-                    connectionClosed()
-                    break
+                    Log.e(TAG, "Potential socket disconnect. Attempting to reconnect", e)
+                    // Attempt to reconnect
+                    isConnected = init()
                 }
             }
+
+            cancel()
         }
 
-        private fun connectionClosed() {
-            this.cancel()
+        private fun init(): Boolean {
+            val isConnected: Boolean = establishConnection()?.let {
+                bluetoothSocket = it
+                bluetoothSocket.isConnected
+            } ?: run {
+                false
+            }
+
+            Intent().also { intent ->
+                intent.action = Constants.INTENT_FILTER_DEVICE_CONNECT_STATUS
+                intent.putExtra(Constants.EXTRA_DEVICE_IS_CONNECTED, isConnected)
+                if (isConnected) {
+                    intent.putExtra(Constants.EXTRA_DEVICE_NAME, bluetoothSocket.remoteDevice.name)
+                    intent.putExtra(
+                        Constants.EXTRA_DEVICE_ADDRESS,
+                        bluetoothSocket.remoteDevice.address
+                    )
+                }
+                sendBroadcast(intent)
+            }
+
+            return isConnected
+        }
+
+        private fun establishConnection(): BluetoothSocket? {
+            try {
+                val socket = bluetoothDevice.createRfcommSocketToServiceRecord(glassEchoUUID)
+
+                socket.connect()
+                Log.v(
+                    TAG,
+                    "Connection status to ${socket.remoteDevice.name}: ${socket.isConnected}"
+                )
+                return socket
+            } catch (e: IOException) {
+                Log.v(TAG, "Failed to accept", e)
+            }
+
+            return null
         }
 
         fun write(bytes: ByteArray?) {
             val text = String(bytes!!, Charset.defaultCharset())
             try {
-                outputStream.write(bytes)
+                bluetoothSocket.outputStream.write(bytes)
             } catch (e: IOException) {
                 Log.e(TAG, "write()", e)
             }
         }
 
-        /* Call this from the main activity to shutdown the connection */
         fun cancel() {
             try {
                 bluetoothSocket.close()
+                isRunning.set(false)
             } catch (e: IOException) {
                 Log.e(TAG, "cancel", e)
             }

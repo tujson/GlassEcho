@@ -34,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import java.io.IOException
 import java.nio.charset.Charset
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
 private val TAG = GlassEchoNotificationListenerService::class.java.simpleName
@@ -153,8 +154,11 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         ).toString()
         val title = sbn.notification.extras.get(Notification.EXTRA_TITLE).toString()
         val text = sbn.notification.extras.get(Notification.EXTRA_TEXT).toString()
-        val largeIcon =
-            getBitmapFromDrawable(sbn.notification.getLargeIcon().loadDrawable(this))
+        val largeIcon = sbn.notification.getLargeIcon()?.let {
+            getBitmapFromDrawable(it.loadDrawable(this))
+        } ?: run {
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
 
         return EchoNotification(appIcon, appName, largeIcon, title, text)
     }
@@ -173,20 +177,16 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
     inner class ConnectedThread : Thread() {
         private val TAG = "ConnectedThread"
+        private var isRunning = AtomicBoolean(true)
         private var bluetoothSocket: BluetoothSocket? = null
 
         override fun run() {
             val buffer = ByteArray(1024)
 
-            bluetoothSocket = establishSocket()
+            bluetoothSocket = establishConnection()
             Log.v(TAG, "bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}")
 
-            if (bluetoothSocket?.isConnected == false) {
-                bluetoothSocket?.close()
-                stopSelf()
-                stopForeground(true)
-            }
-            while (bluetoothSocket?.isConnected == true) {
+            while (bluetoothSocket?.isConnected == true && isRunning.get()) {
                 try {
                     bluetoothSocket?.inputStream?.let { inputStream ->
                         val bytes = inputStream.read(buffer)
@@ -197,13 +197,15 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                     Log.e(TAG, "run()", e)
 
                     // Attempt to reconnect
-                    bluetoothSocket?.close()
-                    bluetoothSocket = establishSocket()
+                    bluetoothSocket = establishConnection()
+                    Log.v(TAG, "bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}")
                 }
             }
+
+            cancel()
         }
 
-        private fun establishSocket(): BluetoothSocket? {
+        private fun establishConnection(): BluetoothSocket? {
             val serverSocket = BluetoothAdapter.getDefaultAdapter()
                 .listenUsingRfcommWithServiceRecord("dev.synople.glassecho", glassEchoUUID)
             val socket = try {
@@ -261,7 +263,10 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         /* Call this from the main activity to shutdown the connection */
         fun cancel() {
             try {
+                isRunning.set(false)
                 bluetoothSocket?.close()
+                stopSelf()
+                stopForeground(true)
             } catch (e: IOException) {
                 Log.e(TAG, "cancel", e)
             }
