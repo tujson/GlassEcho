@@ -13,7 +13,7 @@ import java.util.*
 import kotlin.experimental.and
 import kotlin.experimental.or
 
-class ANCSParser(var mContext: Context) {
+class ANCSParser(var mContext: Context, private var notificationListener: NotificationListener) {
     private val TAG = "ANCSParser"
     private val pendingNotifications: MutableList<ANCSData> = LinkedList()
     private val notificationHandler: Handler
@@ -21,16 +21,11 @@ class ANCSParser(var mContext: Context) {
     private var ancs: BluetoothGattService? = null
     private var gatt: BluetoothGatt? = null
 
-    private val notificationListeners = ArrayList<NotificationListener>()
     private var currData: ANCSData? = null
 
     interface NotificationListener {
         fun onNotificationAdd(notif: IOSNotification?)
         fun onNotificationRemove(uid: Int)
-    }
-
-    fun addNotificationListener(listener: NotificationListener) {
-        if (!notificationListeners.contains(listener)) notificationListeners.add(listener)
     }
 
     fun setService(ancs: BluetoothGattService?, gatt: BluetoothGatt?) {
@@ -40,16 +35,12 @@ class ANCSParser(var mContext: Context) {
 
     private fun sendNotification(notif: IOSNotification) {
         Log.v(TAG, "Add Notification: ${notif.uid}")
-        for (lis in notificationListeners) {
-            lis.onNotificationAdd(notif)
-        }
+        notificationListener.onNotificationAdd(notif)
     }
 
     private fun cancelNotification(uid: Int) {
         Log.v(TAG, "Cancel notification: $uid")
-        for (lis in notificationListeners) {
-            lis.onNotificationRemove(uid)
-        }
+        notificationListener.onNotificationRemove(uid)
     }
 
     private inner class ANCSData internal constructor(
@@ -103,7 +94,7 @@ class ANCSParser(var mContext: Context) {
                     break
                 }
                 if (data.size < curIdx + 3) {
-                    break
+                    return
                 }
                 // attributes head
                 val attrId = data[curIdx].toInt()
@@ -182,35 +173,36 @@ class ANCSParser(var mContext: Context) {
                 val cha = ancs
                     ?.getCharacteristic(GattConstants.Apple.CONTROL_POINT)
                 if (null != cha) {
-                    val bout = ByteArrayOutputStream()
+                    val baos = ByteArrayOutputStream()
                     // command ，commandID
-                    bout.write(0)
+                    baos.write(0)
+
                     // notify id ，
-                    bout.write(currData!!.notifyData!![4].toInt())
-                    bout.write(currData!!.notifyData!![5].toInt())
-                    bout.write(currData!!.notifyData!![6].toInt())
-                    bout.write(currData!!.notifyData!![7].toInt())
+                    baos.write(currData!!.notifyData!![4].toInt())
+                    baos.write(currData!!.notifyData!![5].toInt())
+                    baos.write(currData!!.notifyData!![6].toInt())
+                    baos.write(currData!!.notifyData!![7].toInt())
 
-                    bout.write(NotificationAttributeIDTitle)
-                    bout.write(50)
-                    bout.write(0)
+                    baos.write(NotificationAttributeIDTitle)
+                    baos.write(50)
+                    baos.write(0)
 
-                    bout.write(NotificationAttributeIDSubtitle)
-                    bout.write(100)
-                    bout.write(0)
+                    baos.write(NotificationAttributeIDSubtitle)
+                    baos.write(100)
+                    baos.write(0)
 
-                    bout.write(NotificationAttributeIDMessage)
-                    bout.write(500)
-                    bout.write(0)
+                    baos.write(NotificationAttributeIDMessage)
+                    baos.write(500)
+                    baos.write(0)
 
-                    bout.write(NotificationAttributeIDMessageSize)
-                    bout.write(10)
-                    bout.write(0)
+                    baos.write(NotificationAttributeIDMessageSize)
+                    baos.write(10)
+                    baos.write(0)
 
-                    bout.write(NotificationAttributeIDDate)
-                    bout.write(10)
-                    bout.write(0)
-                    val data = bout.toByteArray()
+                    baos.write(NotificationAttributeIDDate)
+                    baos.write(10)
+                    baos.write(0)
+                    val data = baos.toByteArray()
                     cha.value = data
                     Log.v(
                         TAG,
@@ -269,7 +261,12 @@ class ANCSParser(var mContext: Context) {
             Log.e(TAG, "ANCS Bad notification data format")
             return
         }
-        logD(data)
+        val sb = StringBuffer()
+        val len = data.size
+        for (i in 0 until len) {
+            sb.append(data[i].toString() + ", ")
+        }
+        Log.v(TAG, "log Data size[$len] : $sb")
         val msg = notificationHandler.obtainMessage(MSG_ADD_NOTIFICATION)
         msg.obj = data
         msg.sendToTarget()
@@ -277,15 +274,6 @@ class ANCSParser(var mContext: Context) {
 
     fun reset() {
         notificationHandler.sendEmptyMessage(MSG_RESET)
-    }
-
-    fun logD(d: ByteArray) {
-        val sb = StringBuffer()
-        val len = d.size
-        for (i in 0 until len) {
-            sb.append(d[i].toString() + ", ")
-        }
-        Log.v(TAG, "log Data size[$len] : $sb")
     }
 
     companion object {
@@ -330,13 +318,6 @@ class ANCSParser(var mContext: Context) {
         private const val FINISH_DELAY = 700
         private const val TIMEOUT = 15 * 1000
         private var sInst: ANCSParser? = null
-
-        fun getDefault(c: Context): ANCSParser? {
-            if (sInst == null) {
-                sInst = ANCSParser(c)
-            }
-            return sInst
-        }
 
         fun get(): ANCSParser? {
             return sInst

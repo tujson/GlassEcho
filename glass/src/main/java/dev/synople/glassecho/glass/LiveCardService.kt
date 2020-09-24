@@ -14,7 +14,6 @@ import android.widget.RemoteViews
 import com.google.android.glass.timeline.LiveCard
 import com.google.android.glass.timeline.LiveCard.PublishMode
 import dev.synople.glassecho.common.*
-import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.CONNECT
 import dev.synople.glassecho.glass.LiveCardMenuActivity.Companion.UNPUBLISH_LIVE_CARD
 import java.io.IOException
@@ -164,8 +163,7 @@ class LiveCardService : Service() {
                 val device = adapter.bondedDevices.first()
                 Log.v(TAG, "Connected to ${device.name}")
 
-                val parser = ANCSParser(applicationContext)
-                parser.addNotificationListener(notifListener)
+                val parser = ANCSParser(applicationContext, notifListener)
                 device.connectGatt(applicationContext, true, ANCSGattCallback(parser))
             } catch (e: IOException) {
                 Log.e(TAG, "Failed to accept", e)
