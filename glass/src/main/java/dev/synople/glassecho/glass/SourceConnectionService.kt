@@ -5,12 +5,12 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
 import android.os.IBinder
+import android.os.Parcelable
 import android.util.Log
-import dev.synople.glassecho.common.NOTIFICATION
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import java.io.IOException
-import java.nio.charset.Charset
+import java.io.ObjectInputStream
 import java.util.concurrent.atomic.AtomicBoolean
 
 private val TAG = SourceConnectionService::class.java.simpleName
@@ -48,40 +48,19 @@ class SourceConnectionService : Service() {
         private var isRunning = AtomicBoolean(true)
         var bluetoothSocket: BluetoothSocket? = null
 
-        private var chunks = mutableListOf<String>()
-        private var numChunks = -1
-
         override fun run() {
-            val buffer = ByteArray(1024)
-            var bytes: Int
-
             var isConnected = init()
 
             while (isConnected && isRunning.get()) {
                 try {
-                    bytes = bluetoothSocket?.inputStream?.read(buffer) ?: 0
-
-                    val incomingMessage = String(buffer, 0, bytes)
-                    Log.v(TAG, "incomingMessage: $incomingMessage")
-
-                    if (incomingMessage.startsWith(NOTIFICATION)) {
-                        numChunks = incomingMessage.substring(NOTIFICATION.length).toInt()
-                    } else {
-                        chunks.add(incomingMessage)
-
-                        if (chunks.size == numChunks) {
-                            val message = chunks.joinToString(separator = "")
-                            Intent().also { intent ->
-                                intent.action = Constants.INTENT_FILTER_NOTIFICATION
-                                intent.putExtra(
-                                    Constants.MESSAGE,
-                                    EchoNotification.messageToEchoNotification(message)
-                                )
-                                sendBroadcast(intent)
-                            }
-                            chunks.clear()
-                            numChunks = -1
-                        }
+                    val objectInputStream = ObjectInputStream(bluetoothSocket?.inputStream)
+                    Intent().also { intent ->
+                        intent.action = Constants.INTENT_FILTER_NOTIFICATION
+                        intent.putExtra(
+                            Constants.MESSAGE,
+                            (objectInputStream.readObject() as EchoNotification) as Parcelable
+                        )
+                        sendBroadcast(intent)
                     }
                 } catch (e: IOException) {
                     Log.e(TAG, "Potential socket disconnect. Attempting to reconnect", e)
@@ -123,15 +102,6 @@ class SourceConnectionService : Service() {
             }
 
             return null
-        }
-
-        fun write(bytes: ByteArray?) {
-            val text = String(bytes!!, Charset.defaultCharset())
-            try {
-                bluetoothSocket?.outputStream?.write(bytes)
-            } catch (e: IOException) {
-                Log.e(TAG, "write()", e)
-            }
         }
 
         fun cancel() {

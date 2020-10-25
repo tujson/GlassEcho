@@ -12,10 +12,9 @@ class NotificationAdapter(private val notifications: MutableList<EchoNotificatio
         RecyclerView.ViewHolder(liveCardBinding.root) {
         fun bindNotification(echoNotification: EchoNotification) {
             liveCardBinding.apply {
-                ivAppIcon.setImageBitmap(EchoNotification.byteArrayToBitmap(echoNotification.appIcon))
+                ivAppIcon.setImageBitmap(echoNotification.getAppIconBitmap())
                 tvAppName.text = echoNotification.appName
-                ivLargeIcon.setImageBitmap(EchoNotification.byteArrayToBitmap(echoNotification.largeIcon))
-                ivLargeIcon.setImageBitmap(EchoNotification.byteArrayToBitmap(echoNotification.largeIcon))
+                ivLargeIcon.setImageBitmap(echoNotification.getLargeIconBitmap())
                 tvTitle.text = echoNotification.title
                 tvText.text = echoNotification.text
             }

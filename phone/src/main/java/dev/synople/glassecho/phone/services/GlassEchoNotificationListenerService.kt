@@ -20,8 +20,6 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import dev.synople.glassecho.common.APP_ICON_SIZE
-import dev.synople.glassecho.common.CHUNK_SIZE
-import dev.synople.glassecho.common.NOTIFICATION
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.phone.Constants
@@ -33,7 +31,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import java.io.IOException
-import java.nio.charset.Charset
+import java.io.ObjectOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -164,7 +162,13 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
 
-        return EchoNotification(appIcon, appName, largeIcon, title, text)
+        return EchoNotification(
+            appIcon,
+            appName,
+            largeIcon,
+            title,
+            text
+        )
     }
 
     private fun getBitmapFromDrawable(drawable: Drawable): Bitmap {
@@ -224,45 +228,8 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         }
 
         fun write(echoNotification: EchoNotification, isRemoved: Boolean = false) {
-            Log.v(TAG, "isConnected: ${bluetoothSocket?.isConnected}")
-            Log.v(TAG, "Writing: $echoNotification")
-            val byteArray =
-                EchoNotification.echoNotificationToString(echoNotification).toByteArray()
-            val chunkedByteArray = mutableListOf<ByteArray>()
-
-            if (byteArray.size > CHUNK_SIZE) {
-                for (i in 0 until byteArray.size - CHUNK_SIZE step CHUNK_SIZE) {
-                    chunkedByteArray.add(byteArray.copyOfRange(i, i + CHUNK_SIZE))
-                }
-                chunkedByteArray.add(
-                    byteArray.copyOfRange(
-                        byteArray.size - (byteArray.size % CHUNK_SIZE),
-                        byteArray.size
-                    )
-                )
-            } else {
-                chunkedByteArray.add(byteArray)
-            }
-
-            val meta = NOTIFICATION + chunkedByteArray.size
-            write(meta.toByteArray())
-
-            chunkedByteArray.forEach {
-                write(it)
-            }
-        }
-
-        private fun write(bytes: ByteArray) {
-            try {
-                bluetoothSocket?.outputStream?.let { outputStream ->
-                    outputStream.write(bytes)
-                    outputStream.flush()
-                    Log.v(TAG, "Wrote: ${String(bytes, Charset.defaultCharset())}")
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "isConnected: ${bluetoothSocket?.isConnected}")
-                Log.e(TAG, "write()", e)
-            }
+            val objectOutputStream = ObjectOutputStream(bluetoothSocket?.outputStream)
+            objectOutputStream.writeObject(echoNotification)
         }
 
         fun cancel() {
