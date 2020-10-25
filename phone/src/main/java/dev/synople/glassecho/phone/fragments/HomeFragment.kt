@@ -13,53 +13,64 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
+import androidx.navigation.findNavController
 import com.google.zxing.BarcodeFormat
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import dev.synople.glassecho.phone.R
+import dev.synople.glassecho.phone.databinding.FragmentHomeBinding
 import dev.synople.glassecho.phone.services.GlassEchoNotificationListenerService
-import kotlinx.android.synthetic.main.fragment_home.*
 
 
 private val TAG = HomeFragment::class.java.simpleName
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
+    private var _binding: FragmentHomeBinding? = null
+    private val binding get() = _binding!!
+
     private val CHANNEL_ID = "dev.synople.glassecho.phone"
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        btnConnect.setOnClickListener {
-            val discoverableIntent: Intent =
-                Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
-                    putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+        _binding = FragmentHomeBinding.bind(view)
+        binding.apply {
+            btnConnect.setOnClickListener {
+                val discoverableIntent: Intent =
+                    Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
+                        putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+                    }
+                startActivity(discoverableIntent)
+
+                startEchoService()
+
+                setQrCode()
+            }
+
+            btnNotifications.setOnClickListener {
+                it.findNavController()
+                    .navigate(HomeFragmentDirections.actionHomeFragmentToNotificationPickerFragment())
+            }
+
+            btnTestNotif.setOnClickListener {
+                createNotificationChannel()
+                val builder =
+                    NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
+                        .setSmallIcon(R.drawable.ic_stop)
+                        .setContentTitle("GlassEcho Test Title")
+                        .setContentText("GlassEcho Content Text")
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                with(NotificationManagerCompat.from(requireContext())) {
+                    Log.v(TAG, "About to notify")
+                    notify(156, builder.build())
                 }
-            startActivity(discoverableIntent)
-
-            startEchoService()
-
-            setQrCode()
-        }
-
-        btnNotifications.setOnClickListener {
-            this.findNavController()
-                .navigate(HomeFragmentDirections.actionHomeFragmentToNotificationPickerFragment())
-        }
-
-        btnTestNotif.setOnClickListener {
-            createNotificationChannel()
-            val builder =
-                NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_stop)
-                    .setContentTitle("GlassEcho Test Title")
-                    .setContentText("GlassEcho Content Text")
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            with(NotificationManagerCompat.from(requireContext())) {
-                Log.v(TAG, "About to notify")
-                notify(156, builder.build())
             }
         }
+    }
+
+    override fun onDestroyView() {
+        _binding = null
+        super.onDestroyView()
     }
 
     private fun createNotificationChannel() {
@@ -82,7 +93,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val bluetoothName = BluetoothAdapter.getDefaultAdapter().name
         val qrCodeBitmap =
             BarcodeEncoder().encodeBitmap(bluetoothName, BarcodeFormat.QR_CODE, 800, 800)
-        ivQrCode.setImageBitmap(qrCodeBitmap)
+        binding.ivQrCode.setImageBitmap(qrCodeBitmap)
     }
 
     private fun startEchoService() {

@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment
 import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
 import dev.synople.glassecho.phone.adapters.NotificationAdapter
-import kotlinx.android.synthetic.main.fragment_notification_picker.*
+import dev.synople.glassecho.phone.databinding.FragmentNotificationPickerBinding
 import java.util.Collections
 
 /**
@@ -27,29 +27,33 @@ class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picke
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         installedApps = getInstalledApps()
         sharedPref = activity?.getSharedPreferences(
             SHARED_PREFS,
             Context.MODE_PRIVATE
         )!!
-        adapter = NotificationAdapter(
-            installedApps,
-            requireContext().packageManager,
-            sharedPref
-        ) { packageName, isChecked ->
-            switchAllOn.setOnCheckedChangeListener(null)
-            if (switchAllOn.isChecked && !isChecked) {
-                switchAllOn.isChecked = false
-            } else if (!switchAllOn.isChecked && isChecked && areAllAppsChecked(installedApps)) {
-                switchAllOn.isChecked = true
+
+        FragmentNotificationPickerBinding.bind(view).apply {
+            adapter = NotificationAdapter(
+                installedApps,
+                requireContext().packageManager,
+                sharedPref
+            ) { packageName, isChecked ->
+                switchAllOn.setOnCheckedChangeListener(null)
+                if (switchAllOn.isChecked && !isChecked) {
+                    switchAllOn.isChecked = false
+                } else if (!switchAllOn.isChecked && isChecked && areAllAppsChecked(installedApps)) {
+                    switchAllOn.isChecked = true
+                }
+                switchAllOn.setOnCheckedChangeListener(this@NotificationPickerFragment)
             }
-            switchAllOn.setOnCheckedChangeListener(this)
+            rvApps.adapter = adapter
+
+            switchAllOn.isChecked = areAllAppsChecked(installedApps)
+
+            switchAllOn.setOnCheckedChangeListener(this@NotificationPickerFragment)
         }
-        rvApps.adapter = adapter
-
-        switchAllOn.isChecked = areAllAppsChecked(installedApps)
-
-        switchAllOn.setOnCheckedChangeListener(this)
     }
 
     private fun getInstalledApps(): List<ResolveInfo> {

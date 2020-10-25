@@ -4,12 +4,9 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import dev.synople.glassecho.phone.R
-import kotlinx.android.extensions.LayoutContainer
-import kotlinx.android.synthetic.main.row_notification.view.*
+import dev.synople.glassecho.phone.databinding.RowNotificationBinding
 
 class NotificationAdapter(
     private val apps: List<ResolveInfo>,
@@ -18,36 +15,40 @@ class NotificationAdapter(
     private val onSwitch: (String, Boolean) -> Unit
 ) : RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
     class ViewHolder(
-        override val containerView: View
-    ) : RecyclerView.ViewHolder(containerView), LayoutContainer {
+        private val rowNotificationBinding: RowNotificationBinding
+    ) : RecyclerView.ViewHolder(rowNotificationBinding.root) {
         fun bindApp(
             resolveInfo: ResolveInfo,
             packageManager: PackageManager,
             sharedPref: SharedPreferences,
             onSwitch: (String, Boolean) -> Unit
         ) {
-            containerView.ivAppIcon.setImageDrawable(resolveInfo.loadIcon(packageManager))
-            containerView.tvAppName.text = resolveInfo.loadLabel(packageManager)
+            rowNotificationBinding.apply {
+                ivAppIcon.setImageDrawable(resolveInfo.loadIcon(packageManager))
+                tvAppName.text = resolveInfo.loadLabel(packageManager)
 
-            containerView.ivSwitch.isChecked =
-                sharedPref.getBoolean(resolveInfo.activityInfo.packageName, false)
+                ivSwitch.isChecked =
+                    sharedPref.getBoolean(resolveInfo.activityInfo.packageName, false)
 
-            containerView.ivSwitch.setOnClickListener {
-                sharedPref.edit()
-                    .putBoolean(
-                        resolveInfo.activityInfo.packageName,
-                        containerView.ivSwitch.isChecked
-                    )
-                    .apply()
+                ivSwitch.setOnClickListener {
+                    sharedPref.edit()
+                        .putBoolean(
+                            resolveInfo.activityInfo.packageName,
+                            ivSwitch.isChecked
+                        )
+                        .apply()
 
-                onSwitch(resolveInfo.activityInfo.packageName, containerView.ivSwitch.isChecked)
+                    onSwitch(resolveInfo.activityInfo.packageName, ivSwitch.isChecked)
+                }
             }
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         ViewHolder(
-            LayoutInflater.from(parent.context).inflate(R.layout.row_notification, parent, false)
+            RowNotificationBinding.inflate(
+                LayoutInflater.from(parent.context), parent, false
+            )
         )
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {

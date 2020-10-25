@@ -7,9 +7,7 @@ import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.synople.glassecho.common.GLASS_SOUND_TAP
@@ -19,13 +17,16 @@ import dev.synople.glassecho.glass.GlassGesture
 import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.NotificationAdapter
 import dev.synople.glassecho.glass.R
-import kotlinx.android.synthetic.main.fragment_notification_timeline.*
+import dev.synople.glassecho.glass.databinding.FragmentNotificationTimelineBinding
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 
 private val TAG = NotificationTimelineFragment::class.java.simpleName
 
-class NotificationTimelineFragment : Fragment() {
+class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_timeline) {
+
+    private var _binding: FragmentNotificationTimelineBinding? = null
+    private val binding get() = _binding!!
 
     private val notificationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -48,26 +49,27 @@ class NotificationTimelineFragment : Fragment() {
     private val adapter: NotificationAdapter = NotificationAdapter(notifications)
     private var rvPosition = 0
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ) =
-        inflater.inflate(R.layout.fragment_notification_timeline, container, false)!!
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        _binding = FragmentNotificationTimelineBinding.bind(view)
 
         requireActivity().registerReceiver(
             notificationReceiver,
             IntentFilter(Constants.INTENT_FILTER_NOTIFICATION)
         )
 
-//        PagerSnapHelper().attachToRecyclerView(rvNotifications)
-        rvNotifications.adapter = adapter
-        rvNotifications.layoutManager =
-            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.apply {
+            rvNotifications.adapter = adapter
+            rvNotifications.layoutManager =
+                LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        }
     }
 
+    override fun onDestroyView() {
+        _binding = null
+        super.onDestroyView()
+    }
 
     @Subscribe
     fun onGesture(glassGesture: GlassGesture) {
@@ -76,13 +78,13 @@ class NotificationTimelineFragment : Fragment() {
                 if (rvPosition != notifications.size) {
                     rvPosition++
                 }
-                rvNotifications.smoothScrollToPosition(rvPosition)
+                binding.rvNotifications.smoothScrollToPosition(rvPosition)
             }
             GlassGestureDetector.Gesture.SWIPE_FORWARD -> {
                 if (rvPosition != 0) {
                     rvPosition--
                 }
-                rvNotifications.smoothScrollToPosition(rvPosition)
+                binding.rvNotifications.smoothScrollToPosition(rvPosition)
             }
         }
     }

@@ -10,13 +10,10 @@ import android.content.SharedPreferences
 import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
-import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.google.zxing.integration.android.IntentIntegrator
 import dev.synople.glassecho.common.GLASS_SOUND_SUCCESS
@@ -25,13 +22,16 @@ import dev.synople.glassecho.glass.GlassGesture
 import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.SourceConnectionService
-import kotlinx.android.synthetic.main.fragment_connect.*
+import dev.synople.glassecho.glass.databinding.FragmentConnectBinding
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 
 private val TAG = ConnectFragment::class.java.simpleName
 
 class ConnectFragment : Fragment(R.layout.fragment_connect) {
+
+    private var _binding: FragmentConnectBinding? = null
+    private val binding get() = _binding!!
 
     private var deviceName = ""
     private var sharedPref: SharedPreferences? = null
@@ -86,7 +86,7 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
 
                         requireActivity().unregisterReceiver(this)
                     } else {
-                        tvConnectStatus.text =
+                        binding.tvConnectStatus.text =
                             "Failed to connect. Please make sure GlassEcho is running on your phone."
                     }
                 }
@@ -134,6 +134,8 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        _binding = FragmentConnectBinding.bind(view)
+
         sharedPref =
             requireActivity().getSharedPreferences(Constants.SHARED_PREF, Context.MODE_PRIVATE)
         val deviceName = sharedPref?.getString(Constants.SHARED_PREF_DEVICE_NAME, "") ?: ""
@@ -155,6 +157,11 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
         }
 
         startQrCodeScanner()
+    }
+
+    override fun onDestroyView() {
+        _binding = null
+        super.onDestroyView()
     }
 
     private fun startQrCodeScanner() {
@@ -241,12 +248,13 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
         IntentIntegrator.parseActivityResult(requestCode, resultCode, data)?.let { barcodeResult ->
             barcodeResult.contents?.let { barcodeContents ->
                 requireActivity().runOnUiThread {
-                    tvConnectStatus.text = "Attempting to connect to \"$barcodeContents...\""
+                    binding.tvConnectStatus.text =
+                        "Attempting to connect to \"$barcodeContents...\""
                 }
                 connectToDevice(barcodeContents)
             } ?: run {
                 requireActivity().runOnUiThread {
-                    tvConnectStatus.text = "Error while scanning QR code."
+                    binding.tvConnectStatus.text = "Error while scanning QR code."
                 }
             }
         }

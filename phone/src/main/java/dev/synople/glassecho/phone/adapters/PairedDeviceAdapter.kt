@@ -2,32 +2,31 @@ package dev.synople.glassecho.phone.adapters
 
 import android.bluetooth.BluetoothDevice
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import dev.synople.glassecho.phone.R
-import kotlinx.android.extensions.LayoutContainer
-import kotlinx.android.synthetic.main.card_paired_device.view.*
+import dev.synople.glassecho.phone.databinding.CardPairedDeviceBinding
 
 class PairedDeviceAdapter(
     private val pairedDevices: List<BluetoothDevice>,
     private val pairedDeviceClick: (BluetoothDevice) -> Unit
 ) : RecyclerView.Adapter<PairedDeviceAdapter.ViewHolder>() {
     class ViewHolder(
-        override val containerView: View,
+        private val cardPairedDeviceBinding: CardPairedDeviceBinding,
         private val pairedDeviceClick: (BluetoothDevice) -> Unit
-    ) : RecyclerView.ViewHolder(containerView), LayoutContainer {
+    ) : RecyclerView.ViewHolder(cardPairedDeviceBinding.root) {
         fun bindPairedDevice(bluetoothDevice: BluetoothDevice) {
-            containerView.tvName.text = bluetoothDevice.name
-            containerView.tvAddress.text = bluetoothDevice.address
+            cardPairedDeviceBinding.apply {
+                tvName.text = bluetoothDevice.name
+                tvAddress.text = bluetoothDevice.address
 
-            containerView.setOnClickListener { pairedDeviceClick(bluetoothDevice) }
+                this.root.setOnClickListener { pairedDeviceClick(bluetoothDevice) }
+            }
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         ViewHolder(
-            LayoutInflater.from(parent.context).inflate(R.layout.card_paired_device, parent, false),
+            CardPairedDeviceBinding.inflate(LayoutInflater.from(parent.context), parent, false),
             pairedDeviceClick
         )
 

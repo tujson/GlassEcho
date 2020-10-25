@@ -8,20 +8,24 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import dev.synople.glassecho.phone.Constants
-import dev.synople.glassecho.phone.R
 import dev.synople.glassecho.phone.adapters.PairedDeviceAdapter
-import kotlinx.android.synthetic.main.dialog_fragment_paired_devices.*
+import dev.synople.glassecho.phone.databinding.DialogFragmentPairedDevicesBinding
 
 
 class PairedDevicesDialogFragment : DialogFragment() {
 
+    private var _binding: DialogFragmentPairedDevicesBinding? = null
+    private val binding get() = _binding!!
     private lateinit var adapter: PairedDeviceAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ) = inflater.inflate(R.layout.dialog_fragment_paired_devices, container, false)!!
+    ): View? {
+        _binding = DialogFragmentPairedDevicesBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -36,22 +40,25 @@ class PairedDevicesDialogFragment : DialogFragment() {
                     })
                 dismiss()
             }
-        rvPairedDevices.adapter = adapter
 
-        tvCancel.setOnClickListener {
-            targetFragment?.onActivityResult(
-                Constants.PAIRED_DEVICE_REQUEST_CODE,
-                Constants.PAIRED_DEVICE_CANCEL_RESULT_CODE, null
-            )
-            dismiss()
-        }
+        binding.apply {
+            rvPairedDevices.adapter = adapter
 
-        tvPairNewDevice.setOnClickListener {
-            targetFragment?.onActivityResult(
-                Constants.PAIRED_DEVICE_REQUEST_CODE,
-                Constants.PAIRED_DEVICE_PAIR_RESULT_CODE, null
-            )
-            dismiss()
+            tvCancel.setOnClickListener {
+                targetFragment?.onActivityResult(
+                    Constants.PAIRED_DEVICE_REQUEST_CODE,
+                    Constants.PAIRED_DEVICE_CANCEL_RESULT_CODE, null
+                )
+                dismiss()
+            }
+
+            tvPairNewDevice.setOnClickListener {
+                targetFragment?.onActivityResult(
+                    Constants.PAIRED_DEVICE_REQUEST_CODE,
+                    Constants.PAIRED_DEVICE_PAIR_RESULT_CODE, null
+                )
+                dismiss()
+            }
         }
     }
 
