@@ -1,12 +1,12 @@
 package dev.synople.glassecho.glass.fragments
 
-import android.app.Fragment
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
@@ -17,10 +17,12 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import com.google.zxing.integration.android.IntentIntegrator
 import dev.synople.glassecho.common.GLASS_SOUND_SUCCESS
 import dev.synople.glassecho.glass.Constants
-import dev.synople.glassecho.glass.KeyCode
+import dev.synople.glassecho.glass.GlassGesture
+import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.SourceConnectionService
 import kotlinx.android.synthetic.main.fragment_connect.*
@@ -29,29 +31,23 @@ import org.greenrobot.eventbus.Subscribe
 
 private val TAG = ConnectFragment::class.java.simpleName
 
-class ConnectFragment : Fragment() {
+class ConnectFragment : Fragment(R.layout.fragment_connect) {
 
     private var deviceName = ""
+    private var sharedPref: SharedPreferences? = null
 
     private var pairDeviceReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                BluetoothDevice.ACTION_FOUND -> {
-                    val bluetoothDevice =
-                        intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+            if (intent.action == BluetoothDevice.ACTION_FOUND) {
+                intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)?.let {
+                    if (it.name == deviceName) {
+                        BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
+                        requireActivity().unregisterReceiver(this)
 
-                    if (bluetoothDevice.name == deviceName) {
-                        foundBluetoothDevice(bluetoothDevice)
+                        startBluetoothService(it)
                     }
                 }
             }
-        }
-
-        private fun foundBluetoothDevice(bluetoothDevice: BluetoothDevice) {
-            BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
-            activity.unregisterReceiver(this)
-
-            startBluetoothService(bluetoothDevice)
         }
     }
 
@@ -64,7 +60,10 @@ class ConnectFragment : Fragment() {
                             context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                         audio.playSoundEffect(GLASS_SOUND_SUCCESS)
 
-                        activity.getSharedPreferences(Constants.SHARED_PREF, Context.MODE_PRIVATE)
+                        requireActivity().getSharedPreferences(
+                            Constants.SHARED_PREF,
+                            Context.MODE_PRIVATE
+                        )
                             .edit()?.apply {
                                 putString(
                                     Constants.SHARED_PREF_DEVICE_NAME,
@@ -77,19 +76,20 @@ class ConnectFragment : Fragment() {
                                 apply()
                             }
 
-                        activity.fragmentManager
+                        requireActivity().supportFragmentManager
                             .beginTransaction()
                             .replace(
                                 R.id.frameLayoutMain,
                                 NotificationTimelineFragment.newInstance()
                             )
                             .commit()
+
+                        requireActivity().unregisterReceiver(this)
                     } else {
                         tvConnectStatus.text =
-                            "Failed to connect. Please quit both apps and try again."
+                            "Failed to connect. Please make sure GlassEcho is running on your phone."
                     }
                 }
-
         }
     }
 
@@ -106,16 +106,15 @@ class ConnectFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_delete -> {
-                activity.getSharedPreferences(Constants.SHARED_PREF, Context.MODE_PRIVATE)
-                    .edit()?.apply {
-                        putString(
-                            Constants.SHARED_PREF_DEVICE_NAME, ""
-                        )
-                        putString(
-                            Constants.SHARED_PREF_DEVICE_ADDRESS, ""
-                        )
-                        apply()
-                    }
+                sharedPref?.edit()?.apply {
+                    putString(
+                        Constants.SHARED_PREF_DEVICE_NAME, ""
+                    )
+                    putString(
+                        Constants.SHARED_PREF_DEVICE_ADDRESS, ""
+                    )
+                    apply()
+                }
 
                 startQrCodeScanner()
 
@@ -126,25 +125,19 @@ class ConnectFragment : Fragment() {
     }
 
     @Subscribe
-    fun onKeyEvent(keyCode: KeyCode) {
-        if (keyCode.keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
-            activity.openOptionsMenu()
+    fun onKeyEvent(glassGesture: GlassGesture) {
+        if (glassGesture.gesture == GlassGestureDetector.Gesture.TAP) {
+            requireActivity().openOptionsMenu()
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ) =
-        inflater.inflate(R.layout.fragment_connect, container, false)!!
-
-    override fun onViewCreated(view: View?, savedInstanceState: Bundle?) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        EventBus.getDefault().register(this)
 
-        val sharedPref = activity.getSharedPreferences(Constants.SHARED_PREF, Context.MODE_PRIVATE)
-        val deviceName = sharedPref.getString(Constants.SHARED_PREF_DEVICE_NAME, "")!!
-        val deviceAddress = sharedPref.getString(Constants.SHARED_PREF_DEVICE_ADDRESS, "")!!
+        sharedPref =
+            requireActivity().getSharedPreferences(Constants.SHARED_PREF, Context.MODE_PRIVATE)
+        val deviceName = sharedPref?.getString(Constants.SHARED_PREF_DEVICE_NAME, "") ?: ""
+        val deviceAddress = sharedPref?.getString(Constants.SHARED_PREF_DEVICE_ADDRESS, "") ?: ""
 
         if (deviceName.isNotEmpty() && deviceAddress.isNotEmpty()) {
             val pairedDevice = checkPairedDevices(deviceName)
@@ -153,7 +146,7 @@ class ConnectFragment : Fragment() {
                 return
             } ?: run {
                 // Device is no longer in paired devices list
-                sharedPref.edit().apply {
+                sharedPref?.edit()?.apply {
                     putString(Constants.SHARED_PREF_DEVICE_NAME, "")
                     putString(Constants.SHARED_PREF_DEVICE_ADDRESS, "")
                     apply()
@@ -165,7 +158,7 @@ class ConnectFragment : Fragment() {
     }
 
     private fun startQrCodeScanner() {
-        IntentIntegrator.forFragment(this)
+        IntentIntegrator.forSupportFragment((this as Fragment))
             .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
             .setPrompt("Open GlassEcho on your phone and scan the QR code")
             .setBeepEnabled(false)
@@ -195,7 +188,7 @@ class ConnectFragment : Fragment() {
 
         if (isDiscovering) {
             this.deviceName = deviceName
-            activity.registerReceiver(
+            requireActivity().registerReceiver(
                 pairDeviceReceiver,
                 IntentFilter(BluetoothDevice.ACTION_FOUND)
             )
@@ -205,32 +198,38 @@ class ConnectFragment : Fragment() {
     }
 
     private fun startBluetoothService(bluetoothDevice: BluetoothDevice) {
-        activity.registerReceiver(
+        requireActivity().registerReceiver(
             deviceStatusReceiver,
             IntentFilter(Constants.INTENT_FILTER_DEVICE_CONNECT_STATUS)
         )
-        activity.startService(Intent(activity, SourceConnectionService::class.java).apply {
+
+        requireActivity().startService(Intent(activity, SourceConnectionService::class.java).apply {
             putExtra(
                 Constants.EXTRA_BLUETOOTH_DEVICE, bluetoothDevice
             )
         })
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
+    override fun onStart() {
+        super.onStart()
+        EventBus.getDefault().register(this)
+    }
+
+    override fun onStop() {
         EventBus.getDefault().unregister(this)
+        super.onStop()
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
         try {
-            activity.unregisterReceiver(pairDeviceReceiver)
+            requireActivity().unregisterReceiver(pairDeviceReceiver)
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "pairDeviceReceiver was never registered", e)
         }
         try {
-            activity.unregisterReceiver(deviceStatusReceiver)
+            requireActivity().unregisterReceiver(deviceStatusReceiver)
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "deviceStatusReceiver was never registered", e)
         }
@@ -241,12 +240,12 @@ class ConnectFragment : Fragment() {
         super.onActivityResult(requestCode, resultCode, data)
         IntentIntegrator.parseActivityResult(requestCode, resultCode, data)?.let { barcodeResult ->
             barcodeResult.contents?.let { barcodeContents ->
-                activity.runOnUiThread {
+                requireActivity().runOnUiThread {
                     tvConnectStatus.text = "Attempting to connect to \"$barcodeContents...\""
                 }
                 connectToDevice(barcodeContents)
             } ?: run {
-                activity.runOnUiThread {
+                requireActivity().runOnUiThread {
                     tvConnectStatus.text = "Error while scanning QR code."
                 }
             }

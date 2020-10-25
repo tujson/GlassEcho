@@ -1,9 +1,16 @@
 package dev.synople.glassecho.phone.fragments
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -17,6 +24,8 @@ import kotlinx.android.synthetic.main.fragment_home.*
 private val TAG = HomeFragment::class.java.simpleName
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
+
+    private val CHANNEL_ID = "dev.synople.glassecho.phone"
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -36,6 +45,36 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         btnNotifications.setOnClickListener {
             this.findNavController()
                 .navigate(HomeFragmentDirections.actionHomeFragmentToNotificationPickerFragment())
+        }
+
+        btnTestNotif.setOnClickListener {
+            createNotificationChannel()
+            val builder =
+                NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_stop)
+                    .setContentTitle("GlassEcho Test Title")
+                    .setContentText("GlassEcho Content Text")
+                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            with(NotificationManagerCompat.from(requireContext())) {
+                Log.v(TAG, "About to notify")
+                notify(156, builder.build())
+            }
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Channel name"
+            val descriptionText = "GlassEcho description"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+            }
+            // Register the channel with the system
+            val notificationManager: NotificationManager =
+                requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+            Log.v(TAG, "Created notification channel")
         }
     }
 

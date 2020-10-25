@@ -1,30 +1,52 @@
 package dev.synople.glassecho.glass
 
-import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
-import android.view.View
+import android.view.MotionEvent
+import androidx.fragment.app.FragmentActivity
 import dev.synople.glassecho.glass.fragments.ConnectFragment
 import org.greenrobot.eventbus.EventBus
 
-class MainActivity : Activity() {
+private val TAG = MainActivity::class.java.simpleName
+
+class MainActivity : FragmentActivity() {
+
+    private lateinit var gestureDetector: GlassGestureDetector
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        window.decorView.apply {
-            systemUiVisibility =
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_FULLSCREEN
-        }
+        gestureDetector =
+            GlassGestureDetector(this, object : GlassGestureDetector.OnGestureListener {
+                override fun onGesture(gesture: GlassGestureDetector.Gesture?): Boolean {
+                    val isHandled = when (gesture) {
+                        GlassGestureDetector.Gesture.SWIPE_FORWARD -> true
+                        GlassGestureDetector.Gesture.SWIPE_BACKWARD -> true
+                        GlassGestureDetector.Gesture.TAP -> true
+                        else -> false
+                    }
 
-        fragmentManager
+                    if (isHandled) {
+                        EventBus.getDefault().post(GlassGesture(gesture!!))
+                    }
+
+                    return isHandled
+                }
+            })
+
+        supportFragmentManager
             .beginTransaction()
             .replace(R.id.frameLayoutMain, ConnectFragment.newInstance())
             .commit()
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        EventBus.getDefault().post(KeyCode(keyCode))
-        return super.onKeyDown(keyCode, event)
+    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
+        event?.let {
+            return gestureDetector.onTouchEvent(it)
+        }
+        return super.onGenericMotionEvent(event)
     }
 }

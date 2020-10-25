@@ -59,8 +59,10 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
         showNotification()
 
-        glass = ConnectedThread()
-        glass?.start()
+        if (glass == null) {
+            glass = ConnectedThread()
+            glass?.start()
+        }
 
         return Service.START_STICKY
     }
@@ -69,6 +71,8 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         super.onDestroy()
         coroutineJob.cancel()
         glass?.cancel()
+        stopSelf()
+        stopForeground(true)
     }
 
     private fun showNotification() {
@@ -197,6 +201,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                     Log.e(TAG, "run()", e)
 
                     // Attempt to reconnect
+                    Log.v(TAG, "Attempting to reconnect")
                     bluetoothSocket = establishConnection()
                     Log.v(TAG, "bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}")
                 }
@@ -215,12 +220,12 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                 return null
             }
             serverSocket.close()
-
             return socket
         }
 
         fun write(echoNotification: EchoNotification, isRemoved: Boolean = false) {
-            Log.v(TAG, "Writing: ${echoNotification}")
+            Log.v(TAG, "isConnected: ${bluetoothSocket?.isConnected}")
+            Log.v(TAG, "Writing: $echoNotification")
             val byteArray =
                 EchoNotification.echoNotificationToString(echoNotification).toByteArray()
             val chunkedByteArray = mutableListOf<ByteArray>()
@@ -250,23 +255,20 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         private fun write(bytes: ByteArray) {
             try {
                 bluetoothSocket?.outputStream?.let { outputStream ->
-                    Log.v(TAG, "Writing: ${String(bytes, Charset.defaultCharset())}")
-
                     outputStream.write(bytes)
                     outputStream.flush()
+                    Log.v(TAG, "Wrote: ${String(bytes, Charset.defaultCharset())}")
                 }
             } catch (e: IOException) {
+                Log.e(TAG, "isConnected: ${bluetoothSocket?.isConnected}")
                 Log.e(TAG, "write()", e)
             }
         }
 
-        /* Call this from the main activity to shutdown the connection */
         fun cancel() {
             try {
                 isRunning.set(false)
                 bluetoothSocket?.close()
-                stopSelf()
-                stopForeground(true)
             } catch (e: IOException) {
                 Log.e(TAG, "cancel", e)
             }

@@ -33,4 +33,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btnConnect" />
 
+    <Button
+        android:id="@+id/btnTestNotif"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Send test notification"
+        app:layout_constraintEnd_toStartOf="@id/btnNotifications"
+        app:layout_constraintStart_toEndOf="@id/btnConnect"
+        app:layout_constraintTop_toBottomOf="@id/btnConnect" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

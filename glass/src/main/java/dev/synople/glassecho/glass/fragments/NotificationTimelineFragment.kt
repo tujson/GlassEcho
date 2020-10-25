@@ -1,6 +1,5 @@
 package dev.synople.glassecho.glass.fragments
 
-import android.app.Fragment
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,13 +10,18 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.google.android.glass.widget.CardBuilder
-import com.google.android.glass.widget.CardScrollAdapter
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
 import dev.synople.glassecho.common.GLASS_SOUND_TAP
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.glass.Constants
+import dev.synople.glassecho.glass.GlassGesture
+import dev.synople.glassecho.glass.GlassGestureDetector
+import dev.synople.glassecho.glass.NotificationAdapter
 import dev.synople.glassecho.glass.R
 import kotlinx.android.synthetic.main.fragment_notification_timeline.*
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
 
 private val TAG = NotificationTimelineFragment::class.java.simpleName
 
@@ -32,16 +36,17 @@ class NotificationTimelineFragment : Fragment() {
                     context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 audio.playSoundEffect(GLASS_SOUND_TAP)
 
-                val cardBuilder = echoNotificationToCard(it)
-                notificationCards.add(0, cardBuilder)
-                activity.runOnUiThread {
+                notifications.add(it)
+                requireActivity().runOnUiThread {
                     adapter.notifyDataSetChanged()
                 }
             }
         }
     }
-    private lateinit var adapter: CardScrollAdapter
-    private var notificationCards = mutableListOf<CardBuilder>()
+
+    private val notifications: MutableList<EchoNotification> = mutableListOf()
+    private val adapter: NotificationAdapter = NotificationAdapter(notifications)
+    private var rvPosition = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -49,52 +54,54 @@ class NotificationTimelineFragment : Fragment() {
     ) =
         inflater.inflate(R.layout.fragment_notification_timeline, container, false)!!
 
-    override fun onViewCreated(view: View?, savedInstanceState: Bundle?) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        activity.registerReceiver(
+        requireActivity().registerReceiver(
             notificationReceiver,
             IntentFilter(Constants.INTENT_FILTER_NOTIFICATION)
         )
 
-        adapter = object : CardScrollAdapter() {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup?) =
-                notificationCards[position].getView(convertView, parent)
+//        PagerSnapHelper().attachToRecyclerView(rvNotifications)
+        rvNotifications.adapter = adapter
+        rvNotifications.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+    }
 
-            override fun getPosition(item: Any) = notificationCards.indexOf(item)
 
-            override fun getItem(position: Int) = notificationCards[position]
-
-            override fun getCount() = notificationCards.size
+    @Subscribe
+    fun onGesture(glassGesture: GlassGesture) {
+        when (glassGesture.gesture) {
+            GlassGestureDetector.Gesture.SWIPE_BACKWARD -> {
+                if (rvPosition != notifications.size) {
+                    rvPosition++
+                }
+                rvNotifications.smoothScrollToPosition(rvPosition)
+            }
+            GlassGestureDetector.Gesture.SWIPE_FORWARD -> {
+                if (rvPosition != 0) {
+                    rvPosition--
+                }
+                rvNotifications.smoothScrollToPosition(rvPosition)
+            }
         }
-        cardScrollView.adapter = adapter
     }
 
-    private fun echoNotificationToCard(echoNotification: EchoNotification): CardBuilder {
-        val card = CardBuilder(activity, CardBuilder.Layout.AUTHOR)
-        card.setIcon(echoNotification.largeIcon)
-        card.setAttributionIcon(echoNotification.appIcon)
-        card.setHeading(echoNotification.title)
-        card.setSubheading(echoNotification.appName)
-        card.setText(echoNotification.text)
-        return card
+    override fun onStart() {
+        super.onStart()
+        EventBus.getDefault().register(this)
     }
 
-    override fun onResume() {
-        super.onResume()
-        cardScrollView.activate()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        cardScrollView.deactivate()
+    override fun onStop() {
+        EventBus.getDefault().unregister(this)
+        super.onStop()
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
         try {
-            activity.unregisterReceiver(notificationReceiver)
+            requireActivity().unregisterReceiver(notificationReceiver)
         } catch (e: IllegalArgumentException) {
             Log.e(TAG, "notificationReceiver not registered", e)
         }
