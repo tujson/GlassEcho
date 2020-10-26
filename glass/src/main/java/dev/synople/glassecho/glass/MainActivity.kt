@@ -24,6 +24,8 @@ class MainActivity : FragmentActivity() {
                     val isHandled = when (gesture) {
                         GlassGestureDetector.Gesture.SWIPE_FORWARD -> true
                         GlassGestureDetector.Gesture.SWIPE_BACKWARD -> true
+                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_UP -> true
+                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_DOWN -> true
                         GlassGestureDetector.Gesture.TAP -> true
                         else -> false
                     }

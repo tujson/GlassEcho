@@ -10,13 +10,14 @@ import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import dev.synople.glassecho.common.GLASS_SOUND_TAP
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.glass.Constants
 import dev.synople.glassecho.glass.GlassGesture
 import dev.synople.glassecho.glass.GlassGestureDetector
-import dev.synople.glassecho.glass.NotificationAdapter
 import dev.synople.glassecho.glass.R
+import dev.synople.glassecho.glass.adapters.NotificationAdapter
 import dev.synople.glassecho.glass.databinding.FragmentNotificationTimelineBinding
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -31,13 +32,22 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     private val notificationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.getParcelableExtra<EchoNotification>(Constants.MESSAGE)?.let {
-                Log.v(TAG, "EchoNotification\n${it.title}: ${it.text}")
+                Log.v(TAG, "EchoNotification\n${it}")
 
-                val audio =
-                    context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                audio.playSoundEffect(GLASS_SOUND_TAP)
+                if (it.isRemoved) {
+                    notifications.remove(it)
+                } else {
+                    if (notifications.contains(it)) {
+                        notifications[notifications.indexOf(it)] = it
+                    } else {
+                        val audio =
+                            context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                        audio.playSoundEffect(GLASS_SOUND_TAP)
 
-                notifications.add(it)
+                        notifications.add(it)
+                    }
+                }
+
                 requireActivity().runOnUiThread {
                     adapter.notifyDataSetChanged()
                 }
@@ -46,7 +56,9 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     }
 
     private val notifications: MutableList<EchoNotification> = mutableListOf()
-    private val adapter: NotificationAdapter = NotificationAdapter(notifications)
+    private var adapter: NotificationAdapter = NotificationAdapter(notifications) {
+        // TODO: Stuff
+    }
     private var rvPosition = 0
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -68,6 +80,13 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
 
     override fun onDestroyView() {
         _binding = null
+
+        try {
+            requireActivity().unregisterReceiver(notificationReceiver)
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "notificationReceiver not registered", e)
+        }
+
         super.onDestroyView()
     }
 
@@ -86,6 +105,30 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
                 }
                 binding.rvNotifications.smoothScrollToPosition(rvPosition)
             }
+            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_UP -> {
+                scrollActions(true)
+            }
+            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_DOWN -> {
+                scrollActions(false)
+            }
+        }
+    }
+
+    private fun scrollActions(isScrollUp: Boolean) {
+        val actionRecyclerView = binding.rvNotifications.getChildAt(rvPosition)
+            .findViewById<RecyclerView>(R.id.rvActions)
+
+        var index =
+            (actionRecyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
+
+        if (isScrollUp) {
+            index--
+        } else {
+            index++
+        }
+
+        if (0 <= index && index < notifications[rvPosition].actions.size) {
+            actionRecyclerView.smoothScrollToPosition(index)
         }
     }
 
@@ -97,16 +140,6 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     override fun onStop() {
         EventBus.getDefault().unregister(this)
         super.onStop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        try {
-            requireActivity().unregisterReceiver(notificationReceiver)
-        } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "notificationReceiver not registered", e)
-        }
     }
 
     companion object {

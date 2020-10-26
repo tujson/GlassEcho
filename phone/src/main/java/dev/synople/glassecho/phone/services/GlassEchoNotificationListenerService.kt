@@ -138,14 +138,18 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-//        if (sharedPref?.getBoolean(sbn?.packageName, false) == true) {
-//            sbn?.let {
-//                glass?.write(convertNotificationToEcho(it), isRemoved = true)
-//            }
-//        }
+        if (sharedPref?.getBoolean(sbn?.packageName, false) == true) {
+            sbn?.let {
+                glass?.write(convertNotificationToEcho(it, isRemoved = true))
+            }
+        }
     }
 
-    private fun convertNotificationToEcho(sbn: StatusBarNotification): EchoNotification {
+    private fun convertNotificationToEcho(
+        sbn: StatusBarNotification,
+        isRemoved: Boolean = false
+    ): EchoNotification {
+        val id = sbn.packageName + sbn.id
         val appIcon =
             getBitmapFromDrawable(packageManager.getApplicationIcon(sbn.packageName))
         val appName = packageManager.getApplicationLabel(
@@ -162,12 +166,20 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
 
+        val actions = mutableListOf<String>()
+        sbn.notification.actions?.forEach {
+            actions.add(it.title.toString())
+        }
+
         return EchoNotification(
+            id,
             appIcon,
             appName,
             largeIcon,
             title,
-            text
+            text,
+            actions,
+            isRemoved = isRemoved,
         )
     }
 
@@ -227,9 +239,15 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             return socket
         }
 
-        fun write(echoNotification: EchoNotification, isRemoved: Boolean = false) {
-            val objectOutputStream = ObjectOutputStream(bluetoothSocket?.outputStream)
-            objectOutputStream.writeObject(echoNotification)
+        fun write(echoNotification: EchoNotification) {
+            try {
+                bluetoothSocket?.let {
+                    val objectOutputStream = ObjectOutputStream(it.outputStream)
+                    objectOutputStream.writeObject(echoNotification)
+                }
+            } catch (e: IOException) {
+                Log.e(TAG, "Write", e)
+            }
         }
 
         fun cancel() {
