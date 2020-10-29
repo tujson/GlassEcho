@@ -24,17 +24,15 @@ class NotificationAdapter(
             }
 
             liveCardBinding.apply {
-                ivAppIcon.setImageBitmap(echoNotification.getAppIconBitmap())
-                tvAppName.text = echoNotification.appName
-                ivLargeIcon.setImageBitmap(echoNotification.getLargeIconBitmap())
-                tvTitle.text = echoNotification.title
-                tvText.text = echoNotification.text
-                this.root.setOnClickListener {
-                    itemClick(echoNotification)
-                }
+                this.echoNotification = echoNotification
+                executePendingBindings()
 
                 rvActions.adapter = actionAdapter
                 rvActions.setHasFixedSize(true)
+
+                this.root.setOnClickListener {
+                    itemClick(echoNotification)
+                }
             }
         }
     }
