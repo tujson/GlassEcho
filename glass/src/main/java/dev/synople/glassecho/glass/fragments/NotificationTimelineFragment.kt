@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dev.synople.glassecho.common.GLASS_SOUND_DISMISS
@@ -20,6 +21,7 @@ import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.adapters.NotificationAdapter
 import dev.synople.glassecho.glass.databinding.FragmentNotificationTimelineBinding
+import dev.synople.glassecho.glass.viewmodels.NotificationsViewModel
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 
@@ -71,9 +73,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     }
 
     private val notifications: MutableList<EchoNotification> = mutableListOf()
-    private var adapter: NotificationAdapter = NotificationAdapter(notifications) {
-        // TODO: Stuff
-    }
+    private var adapter: NotificationAdapter = NotificationAdapter(notifications)
     private var rvPosition = 0
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

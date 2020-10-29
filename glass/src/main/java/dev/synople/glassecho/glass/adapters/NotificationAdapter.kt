@@ -2,46 +2,39 @@ package dev.synople.glassecho.glass.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.RecyclerView
 import dev.synople.glassecho.common.models.EchoNotification
-import dev.synople.glassecho.glass.databinding.LiveCardBinding
+import dev.synople.glassecho.glass.R
+import dev.synople.glassecho.glass.databinding.ItemNotificationBinding
 
 class NotificationAdapter(
-    private val notifications: MutableList<EchoNotification>,
-    private val itemClick: (EchoNotification) -> Unit
+    private val notifications: MutableList<EchoNotification>
 ) :
     RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
 
-    class ViewHolder(private val liveCardBinding: LiveCardBinding) :
-        RecyclerView.ViewHolder(liveCardBinding.root) {
+    private val viewPool = RecyclerView.RecycledViewPool()
 
-        fun bindNotification(
-            echoNotification: EchoNotification,
-            itemClick: (EchoNotification) -> Unit
-        ) {
-            val actionAdapter = NotificationActionAdapter(echoNotification.actions) {
-
-            }
-
-            liveCardBinding.apply {
-                this.echoNotification = echoNotification
-                executePendingBindings()
-
-                rvActions.adapter = actionAdapter
-                rvActions.setHasFixedSize(true)
-
-                this.root.setOnClickListener {
-                    itemClick(echoNotification)
-                }
-            }
-        }
-    }
+    class ViewHolder(val liveCardBinding: ItemNotificationBinding) :
+        RecyclerView.ViewHolder(liveCardBinding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        ViewHolder(LiveCardBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        ViewHolder(
+            DataBindingUtil.inflate(
+                LayoutInflater.from(parent.context),
+                R.layout.item_notification,
+                parent,
+                false
+            )
+        )
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bindNotification(notifications[position], itemClick)
+        holder.liveCardBinding.apply {
+            echoNotification = notifications[position]
+            rvActions.setRecycledViewPool(viewPool)
+
+            executePendingBindings()
+        }
     }
 
     override fun getItemCount() = notifications.size
