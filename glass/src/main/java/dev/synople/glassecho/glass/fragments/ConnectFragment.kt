@@ -16,8 +16,8 @@ import android.view.MenuItem
 import android.view.View
 import androidx.fragment.app.Fragment
 import com.google.zxing.integration.android.IntentIntegrator
-import dev.synople.glassecho.common.GLASS_SOUND_SUCCESS
 import dev.synople.glassecho.glass.Constants
+import dev.synople.glassecho.glass.GLASS_SOUND_SUCCESS
 import dev.synople.glassecho.glass.GlassGesture
 import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.R

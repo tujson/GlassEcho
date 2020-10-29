@@ -156,10 +156,10 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     }
 
     private fun scrollNotifications(isScrollForward: Boolean) {
-        if (isScrollForward && rvPosition + 1 < notificationsViewModel.size().toInt()) {
-            rvPosition += 1
-        } else if (!isScrollForward && rvPosition - 1 >= 0) {
+        if (isScrollForward && rvPosition - 1 >= 0) {
             rvPosition -= 1
+        } else if (!isScrollForward && rvPosition + 1 < notificationsViewModel.size().toInt()) {
+            rvPosition += 1
         } else {
             playSoundEffect(GLASS_SOUND_DISALLOWED)
         }
