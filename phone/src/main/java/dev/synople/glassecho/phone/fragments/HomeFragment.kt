@@ -2,6 +2,7 @@ package dev.synople.glassecho.phone.fragments
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
@@ -11,17 +12,21 @@ import android.util.Log
 import android.view.View
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.findNavController
 import com.google.zxing.BarcodeFormat
 import com.journeyapps.barcodescanner.BarcodeEncoder
+import dev.synople.glassecho.phone.NotificationActionReceiver
 import dev.synople.glassecho.phone.R
 import dev.synople.glassecho.phone.databinding.FragmentHomeBinding
 import dev.synople.glassecho.phone.services.GlassEchoNotificationListenerService
 
 
 private val TAG = HomeFragment::class.java.simpleName
+val TEST_NOTIFICATION_ACTION = "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION"
+val TEST_NOTIFICATION_ACTION_REPLY = "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION_REPLY"
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
@@ -53,17 +58,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             }
 
             btnTestNotif.setOnClickListener {
-                createNotificationChannel()
-                val builder =
-                    NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
-                        .setSmallIcon(R.drawable.ic_stop)
-                        .setContentTitle("GlassEcho Test Title")
-                        .setContentText("GlassEcho Content Text\n${System.currentTimeMillis() / 1000}")
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                with(NotificationManagerCompat.from(requireContext())) {
-                    Log.v(TAG, "About to notify")
-                    notify(156, builder.build())
-                }
+                showNotification()
             }
         }
     }
@@ -71,6 +66,61 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     override fun onDestroyView() {
         _binding = null
         super.onDestroyView()
+    }
+
+    private fun showNotification() {
+        createNotificationChannel()
+
+        val remoteInput = RemoteInput.Builder(TEST_NOTIFICATION_ACTION_REPLY).run {
+            setLabel("Reply")
+            build()
+        }
+
+        val replyPendingIntent = PendingIntent.getBroadcast(
+            requireContext().applicationContext,
+            0,
+            Intent(requireContext(), NotificationActionReceiver::class.java).apply {
+                action = TEST_NOTIFICATION_ACTION_REPLY
+                putExtra(TEST_NOTIFICATION_ACTION_REPLY, "REPLY")
+            },
+            0
+        )
+        val replyAction = NotificationCompat.Action.Builder(null, "Reply", replyPendingIntent)
+            .addRemoteInput(remoteInput).build()
+
+        val firstAction = PendingIntent.getBroadcast(
+            requireContext().applicationContext,
+            1,
+            Intent(requireContext(), NotificationActionReceiver::class.java).apply {
+                action = TEST_NOTIFICATION_ACTION
+                putExtra(TEST_NOTIFICATION_ACTION, "One")
+            },
+            0
+        )
+        val secondAction = PendingIntent.getBroadcast(
+            requireContext().applicationContext,
+            2,
+            Intent(requireContext(), NotificationActionReceiver::class.java).apply {
+                action = TEST_NOTIFICATION_ACTION
+                putExtra(TEST_NOTIFICATION_ACTION, "Two")
+            },
+            0
+        )
+
+        val builder =
+            NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stop)
+                .setContentTitle("GlassEcho Test Title")
+                .setContentText("GlassEcho Content Text\n${System.currentTimeMillis() / 1000}")
+                .addAction(replyAction)
+                .addAction(R.drawable.ic_stop, "One", firstAction)
+                .addAction(R.drawable.ic_stop, "Two", secondAction)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        with(NotificationManagerCompat.from(requireContext())) {
+            Log.v(TAG, "About to notify")
+            notify(156, builder.build())
+        }
     }
 
     private fun createNotificationChannel() {

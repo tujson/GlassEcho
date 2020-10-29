@@ -35,6 +35,11 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:enabled="true" />
+
     </application>
 
 </manifest>
