@@ -60,11 +60,11 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
                             context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                         audio.playSoundEffect(GLASS_SOUND_SUCCESS)
 
-                        requireActivity().getSharedPreferences(
-                            Constants.SHARED_PREF,
-                            Context.MODE_PRIVATE
-                        )
-                            .edit()?.apply {
+                        requireActivity().apply {
+                            getSharedPreferences(
+                                Constants.SHARED_PREF,
+                                Context.MODE_PRIVATE
+                            ).edit()?.apply {
                                 putString(
                                     Constants.SHARED_PREF_DEVICE_NAME,
                                     intent.getStringExtra(Constants.EXTRA_DEVICE_NAME)
@@ -76,16 +76,26 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
                                 apply()
                             }
 
-                        requireActivity().supportFragmentManager
-                            .beginTransaction()
-                            .replace(
-                                R.id.frameLayoutMain,
-                                NotificationTimelineFragment.newInstance()
-                            )
-                            .commit()
+                            supportFragmentManager
+                                .beginTransaction()
+                                .replace(
+                                    R.id.frameLayoutMain,
+                                    NotificationTimelineFragment.newInstance()
+                                )
+                                .commit()
+
+                        }
 
                         requireActivity().unregisterReceiver(this)
                     } else {
+                        Log.v(TAG, "Failed to connect.")
+                        requireActivity().stopService(
+                            Intent(
+                                requireActivity(),
+                                SourceConnectionService::class.java
+                            )
+                        )
+
                         binding.tvConnectStatus.text =
                             "Failed to connect. Please make sure GlassEcho is running on your phone."
                     }
@@ -233,12 +243,12 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
         try {
             requireActivity().unregisterReceiver(pairDeviceReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "pairDeviceReceiver was never registered", e)
+            Log.v(TAG, "pairDeviceReceiver was never registered", e)
         }
         try {
             requireActivity().unregisterReceiver(deviceStatusReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "deviceStatusReceiver was never registered", e)
+            Log.v(TAG, "deviceStatusReceiver was never registered", e)
         }
         BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
     }

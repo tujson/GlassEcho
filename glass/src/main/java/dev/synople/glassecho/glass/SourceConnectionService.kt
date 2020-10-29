@@ -33,7 +33,7 @@ class SourceConnectionService : Service() {
                     start()
                 }
             } ?: run {
-                Log.e(TAG, "No BluetoothDevice found in extras")
+                Log.v(TAG, "No BluetoothDevice found in extras")
             })
         return START_STICKY
     }
@@ -68,7 +68,6 @@ class SourceConnectionService : Service() {
                     isConnected = init()
                 }
             }
-            Log.v(TAG, "$isConnected ${isRunning.get()}")
 
             cancel()
         }

@@ -31,25 +31,41 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
 
     private val notificationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+
             intent?.getParcelableExtra<EchoNotification>(Constants.MESSAGE)?.let {
                 Log.v(TAG, "EchoNotification\n${it}")
 
-                if (it.isRemoved) {
-                    notifications.remove(it)
-                } else {
-                    if (notifications.contains(it)) {
-                        notifications[notifications.indexOf(it)] = it
-                    } else {
-                        val audio =
-                            context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                        audio.playSoundEffect(GLASS_SOUND_TAP)
+                var index = notifications.indexOf(it)
 
-                        notifications.add(it)
+                if (it.isRemoved && index != -1) {
+                    notifications.removeAt(index)
+
+                    requireActivity().runOnUiThread {
+                        adapter.notifyItemRemoved(index)
                     }
-                }
+                } else {
+                    if (index == -1) {
+                        notifications.add(it)
+                        index = 0
 
-                requireActivity().runOnUiThread {
-                    adapter.notifyDataSetChanged()
+                        requireActivity().runOnUiThread {
+                            adapter.notifyItemInserted(0)
+                        }
+                    } else {
+                        notifications[index] = it
+
+                        requireActivity().runOnUiThread {
+                            adapter.notifyItemChanged(0)
+                        }
+                    }
+
+                    val audio =
+                        context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    audio.playSoundEffect(GLASS_SOUND_TAP)
+
+                    requireActivity().runOnUiThread {
+                        binding.rvNotifications.scrollToPosition(index)
+                    }
                 }
             }
         }
