@@ -4,10 +4,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dev.synople.glassecho.common.models.EchoNotification
+import dev.synople.glassecho.glass.notifyObserver
 
 class NotificationsViewModel : ViewModel() {
 
     private val notifications: MutableLiveData<MutableList<EchoNotification>> = MutableLiveData()
+
+    init {
+        notifications.value = mutableListOf()
+    }
 
     fun getNotifications(): LiveData<MutableList<EchoNotification>> = notifications
 
@@ -23,5 +28,15 @@ class NotificationsViewModel : ViewModel() {
                 notifications.value?.set(index, echoNotification)
             }
         }
+
+        notifications.notifyObserver()
     }
+
+    fun remove(index: Int) {
+        notifications.value?.removeAt(index)
+        notifications.notifyObserver()
+    }
+
+    fun size() = (notifications.value?.size ?: 0).toString()
 }
+

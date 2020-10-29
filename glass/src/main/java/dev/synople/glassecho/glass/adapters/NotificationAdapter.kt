@@ -8,12 +8,17 @@ import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.databinding.ItemNotificationBinding
 
-class NotificationAdapter(
-    private val notifications: MutableList<EchoNotification>
-) :
+class NotificationAdapter :
     RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
 
+    private val notifications: MutableList<EchoNotification> = mutableListOf()
     private val viewPool = RecyclerView.RecycledViewPool()
+
+    fun setNotifications(notifications: List<EchoNotification>) {
+        this.notifications.clear()
+        this.notifications.addAll(notifications)
+        notifyDataSetChanged()
+    }
 
     class ViewHolder(val liveCardBinding: ItemNotificationBinding) :
         RecyclerView.ViewHolder(liveCardBinding.root)

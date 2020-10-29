@@ -34,7 +34,6 @@
             android:layout_height="wrap_content"
             android:layout_alignTop="@id/ivLargeIcon"
             android:layout_alignBottom="@id/ivLargeIcon"
-            android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
             android:layout_toEndOf="@id/ivLargeIcon"
             android:gravity="center_vertical"
@@ -86,7 +85,7 @@
             android:layout_toStartOf="@id/tvAppName"
             android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            bind:notificationActions="@{echoNotification.actions}" />
+            bind:notificationActionAdapter="@{echoNotification.actions}" />
 
     </RelativeLayout>
 
