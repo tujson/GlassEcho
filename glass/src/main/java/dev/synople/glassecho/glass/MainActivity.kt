@@ -1,12 +1,11 @@
 package dev.synople.glassecho.glass
 
 import android.os.Bundle
-import android.util.Log
-import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.fragment.app.FragmentActivity
 import dev.synople.glassecho.glass.fragments.ConnectFragment
 import org.greenrobot.eventbus.EventBus
+
 
 private val TAG = MainActivity::class.java.simpleName
 
@@ -24,8 +23,9 @@ class MainActivity : FragmentActivity() {
                     val isHandled = when (gesture) {
                         GlassGestureDetector.Gesture.SWIPE_FORWARD -> true
                         GlassGestureDetector.Gesture.SWIPE_BACKWARD -> true
-                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_UP -> true
-                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_DOWN -> true
+                        GlassGestureDetector.Gesture.SWIPE_UP -> true
+                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_FORWARD -> true
+                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_BACKWARD -> true
                         GlassGestureDetector.Gesture.TAP -> true
                         else -> false
                     }

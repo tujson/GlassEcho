@@ -17,3 +17,4 @@ const val NOTIFICATION_TEXT = "TEXT"
 
 const val GLASS_SOUND_SUCCESS = 12
 const val GLASS_SOUND_TAP = 13
+const val GLASS_SOUND_DISMISS = 15

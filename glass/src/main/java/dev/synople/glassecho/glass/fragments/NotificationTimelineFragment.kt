@@ -11,6 +11,7 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import dev.synople.glassecho.common.GLASS_SOUND_DISMISS
 import dev.synople.glassecho.common.GLASS_SOUND_TAP
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.glass.Constants
@@ -43,7 +44,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
                     requireActivity().runOnUiThread {
                         adapter.notifyItemRemoved(index)
                     }
-                } else {
+                } else if (!it.isRemoved) {
                     if (index == -1) {
                         notifications.add(it)
                         index = 0
@@ -59,9 +60,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
                         }
                     }
 
-                    val audio =
-                        context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                    audio.playSoundEffect(GLASS_SOUND_TAP)
+                    playSoundEffect(GLASS_SOUND_TAP)
 
                     requireActivity().runOnUiThread {
                         binding.rvNotifications.scrollToPosition(index)
@@ -100,7 +99,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         try {
             requireActivity().unregisterReceiver(notificationReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "notificationReceiver not registered", e)
+            Log.v(TAG, "notificationReceiver not registered", e)
         }
 
         super.onDestroyView()
@@ -109,6 +108,10 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     @Subscribe
     fun onGesture(glassGesture: GlassGesture) {
         when (glassGesture.gesture) {
+            GlassGestureDetector.Gesture.TAP -> {
+                // TODO: Notif action
+                playSoundEffect(GLASS_SOUND_TAP)
+            }
             GlassGestureDetector.Gesture.SWIPE_BACKWARD -> {
                 if (rvPosition != notifications.size) {
                     rvPosition++
@@ -121,10 +124,18 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
                 }
                 binding.rvNotifications.smoothScrollToPosition(rvPosition)
             }
-            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_UP -> {
+            GlassGestureDetector.Gesture.SWIPE_UP -> {
+                notifications.removeAt(rvPosition)
+                adapter.notifyItemRemoved(rvPosition)
+
+                playSoundEffect(GLASS_SOUND_DISMISS)
+
+                // TODO: Notify phone that notif is dismissed
+            }
+            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_FORWARD -> {
                 scrollActions(true)
             }
-            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_DOWN -> {
+            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_BACKWARD -> {
                 scrollActions(false)
             }
         }
@@ -146,6 +157,12 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         if (0 <= index && index < notifications[rvPosition].actions.size) {
             actionRecyclerView.smoothScrollToPosition(index)
         }
+    }
+
+    private fun playSoundEffect(soundEffect: Int) {
+        val audio =
+            context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audio.playSoundEffect(soundEffect)
     }
 
     override fun onStart() {
