@@ -33,6 +33,7 @@ import kotlinx.coroutines.Job
 import java.io.IOException
 import java.io.ObjectOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 import kotlin.coroutines.CoroutineContext
 
 private val TAG = GlassEchoNotificationListenerService::class.java.simpleName
@@ -240,13 +241,20 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         }
 
         fun write(echoNotification: EchoNotification) {
-            try {
-                bluetoothSocket?.let {
-                    val objectOutputStream = ObjectOutputStream(it.outputStream)
-                    objectOutputStream.writeObject(echoNotification)
+            thread {
+                try {
+                    bluetoothSocket?.let {
+                        val objectOutputStream = ObjectOutputStream(it.outputStream)
+                        objectOutputStream.writeObject(echoNotification)
+                    }
+                } catch (e: IOException) {
+                    Log.e(
+                        TAG,
+                        "Write (bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}",
+                        e
+                    )
+                    bluetoothSocket = establishConnection()
                 }
-            } catch (e: IOException) {
-                Log.e(TAG, "Write", e)
             }
         }
 
