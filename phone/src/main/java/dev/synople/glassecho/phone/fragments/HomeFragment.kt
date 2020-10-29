@@ -58,7 +58,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
                         .setSmallIcon(R.drawable.ic_stop)
                         .setContentTitle("GlassEcho Test Title")
-                        .setContentText("GlassEcho Content Text")
+                        .setContentText("GlassEcho Content Text\n${System.currentTimeMillis() / 1000}")
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 with(NotificationManagerCompat.from(requireContext())) {
                     Log.v(TAG, "About to notify")
