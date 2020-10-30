@@ -34,7 +34,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         override fun onReceive(context: Context?, intent: Intent?) {
 
             intent?.getParcelableExtra<EchoNotification>(Constants.MESSAGE)?.let {
-                Log.v(TAG, "EchoNotification\n${it}")
+                Log.v(TAG, "Received EchoNotification: ${it.id}")
 
                 notificationsViewModel.handleNotification(it)
 
