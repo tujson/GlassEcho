@@ -76,12 +76,13 @@ class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picke
     }
 
     override fun onCheckedChanged(buttonView: CompoundButton?, isChecked: Boolean) {
-        installedApps.forEach {
-            sharedPref.edit()
-                .putBoolean(it.activityInfo.packageName, isChecked)
-                .apply()
+        sharedPref.edit().apply {
+            installedApps.forEach {
+                this.putBoolean(it.activityInfo.packageName, isChecked)
+            }
+            apply()
         }
+
         adapter.notifyDataSetChanged()
     }
-
 }
