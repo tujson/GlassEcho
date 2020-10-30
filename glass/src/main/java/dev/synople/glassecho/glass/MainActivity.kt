@@ -44,10 +44,19 @@ class MainActivity : FragmentActivity() {
             .commit()
     }
 
+    // For Glass XE
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
         event?.let {
             return gestureDetector.onTouchEvent(it)
         }
         return super.onGenericMotionEvent(event)
+    }
+
+    // For Glass EE 2
+    override fun dispatchTouchEvent(event: MotionEvent?): Boolean {
+        event?.let {
+            return gestureDetector.onTouchEvent(event)
+        }
+        return super.dispatchTouchEvent(event)
     }
 }

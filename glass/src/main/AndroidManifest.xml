@@ -21,6 +21,8 @@
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="com.google.android.glass.category.DIRECTORY" />
+
             </intent-filter>
             <intent-filter>
                 <action android:name="com.google.android.glass.action.VOICE_TRIGGER" />
@@ -35,6 +37,10 @@
             android:name=".SourceConnectionService"
             android:icon="@drawable/ic_glass_logo"
             android:label="@string/title_activity_live_card_service" />
+
+        <meta-data
+            android:name="com.google.android.glass.TouchEnabledApplication"
+            android:value="true" />
 
     </application>
 
