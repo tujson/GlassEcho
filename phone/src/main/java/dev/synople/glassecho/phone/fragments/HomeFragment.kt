@@ -6,9 +6,9 @@ import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -25,8 +25,9 @@ import dev.synople.glassecho.phone.services.GlassEchoNotificationListenerService
 
 
 private val TAG = HomeFragment::class.java.simpleName
-val TEST_NOTIFICATION_ACTION = "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION"
-val TEST_NOTIFICATION_ACTION_REPLY = "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION_REPLY"
+const val TEST_NOTIFICATION_ACTION = "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION"
+const val TEST_NOTIFICATION_ACTION_REPLY =
+    "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION_REPLY"
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
@@ -109,7 +110,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
         val builder =
             NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_stop)
+                .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_stop))
                 .setContentTitle("GlassEcho Test Title")
                 .setContentText("GlassEcho Content Text\n${System.currentTimeMillis() / 1000}")
                 .addAction(replyAction)
@@ -118,7 +119,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         with(NotificationManagerCompat.from(requireContext())) {
-            Log.v(TAG, "About to notify")
             notify(156, builder.build())
         }
     }
@@ -131,11 +131,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
             }
+
             // Register the channel with the system
             val notificationManager: NotificationManager =
                 requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
-            Log.v(TAG, "Created notification channel")
         }
     }
 
