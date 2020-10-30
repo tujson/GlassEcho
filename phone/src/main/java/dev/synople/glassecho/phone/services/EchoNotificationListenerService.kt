@@ -125,25 +125,45 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        Log.v(
-            TAG,
-            "Content (${sbn?.packageName}): " + sbn?.notification?.extras?.get(Notification.EXTRA_TEXT)
-                .toString()
-        )
-
-        if (sharedPref?.getBoolean(sbn?.packageName, false) == true) {
-            sbn?.let {
-                glass?.write(convertNotificationToEcho(it))
-            }
+        if (sbn != null
+            && sharedPref?.getBoolean(sbn.packageName, false) == true
+            && isWantedNotification(sbn)
+        ) {
+            glass?.write(convertNotificationToEcho(sbn))
         }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        if (sharedPref?.getBoolean(sbn?.packageName, false) == true) {
-            sbn?.let {
-                glass?.write(convertNotificationToEcho(it, isRemoved = true))
-            }
+        if (sbn != null && sharedPref?.getBoolean(sbn.packageName, false) == true) {
+            glass?.write(convertNotificationToEcho(sbn, isRemoved = true))
         }
+    }
+
+    private fun isWantedNotification(sbn: StatusBarNotification): Boolean {
+        if (sbn.notification.flags and Notification.FLAG_FOREGROUND_SERVICE != 0
+            || sbn.notification.flags and Notification.FLAG_ONGOING_EVENT != 0
+            || sbn.notification.flags and Notification.FLAG_LOCAL_ONLY != 0
+            || sbn.notification.flags and NotificationCompat.FLAG_GROUP_SUMMARY != 0
+        ) {
+            return false
+        }
+
+        // Because Facebook Messenger is weird.
+        if (sbn.packageName == "com.facebook.orca" && sbn.id == 10012 && sbn.notification.tickerText == null) {
+            return false
+        }
+
+        // Apparently low battery is repeatedly shown
+        if (sbn.packageName == "com.android.systemui" && sbn.tag == "low_battery") {
+            return false
+        }
+
+        // No need to show our service
+        if (sbn.packageName == "dev.synople.glassecho.phone" && sbn.isOngoing) {
+            return false
+        }
+
+        return true
     }
 
     private fun convertNotificationToEcho(
