@@ -14,9 +14,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.glass.Constants
-import dev.synople.glassecho.glass.GLASS_SOUND_DISALLOWED
-import dev.synople.glassecho.glass.GLASS_SOUND_DISMISS
-import dev.synople.glassecho.glass.GLASS_SOUND_TAP
 import dev.synople.glassecho.glass.GlassGesture
 import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.R
@@ -42,39 +39,8 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
                 notificationsViewModel.handleNotification(it)
 
                 if (!it.isRemoved) {
-                    playSoundEffect(GLASS_SOUND_TAP)
+                    playSoundEffect(Constants.GLASS_SOUND_TAP)
                 }
-
-//                var index = notifications.indexOf(it)
-//
-//                if (it.isRemoved && index != -1) {
-//                    notifications.removeAt(index)
-//
-//                    requireActivity().runOnUiThread {
-//                        adapter.notifyItemRemoved(index)
-//                    }
-//                } else if (!it.isRemoved) {
-//                    if (index == -1) {
-//                        notifications.add(it)
-//                        index = 0
-//
-//                        requireActivity().runOnUiThread {
-//                            adapter.notifyItemInserted(0)
-//                        }
-//                    } else {
-//                        notifications[index] = it
-//
-//                        requireActivity().runOnUiThread {
-//                            adapter.notifyItemChanged(0)
-//                        }
-//                    }
-//
-//                    playSoundEffect(GLASS_SOUND_TAP)
-//
-//                    requireActivity().runOnUiThread {
-//                        binding.rvNotifications.scrollToPosition(index)
-//                    }
-//                }
             }
         }
     }
@@ -92,6 +58,12 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         notificationsViewModel.getNotifications().observe(viewLifecycleOwner, {
             adapter.setNotifications(it)
 
+            if (it.size == 0) {
+                binding.tvNumNotifications.text = getString(R.string.no_notifications)
+            } else {
+                binding.tvNumNotifications.text = "${rvPosition + 1}/${it.size}"
+            }
+
             binding.executePendingBindings()
         })
 
@@ -106,15 +78,13 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
 
     override fun onDestroyView() {
         _binding = null
+        EventBus.getDefault().unregister(this)
 
         try {
             requireActivity().unregisterReceiver(notificationReceiver)
         } catch (e: IllegalArgumentException) {
             Log.v(TAG, "notificationReceiver not registered", e)
         }
-
-        EventBus.getDefault().unregister(this)
-
 
         super.onDestroyView()
     }
@@ -144,13 +114,13 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     }
 
     private fun executeNotification() {
-        playSoundEffect(GLASS_SOUND_TAP)
+        playSoundEffect(Constants.GLASS_SOUND_TAP)
         // TODO: Notif action
     }
 
     private fun dismissNotification() {
         notificationsViewModel.remove(rvPosition)
-        playSoundEffect(GLASS_SOUND_DISMISS)
+        playSoundEffect(Constants.GLASS_SOUND_DISMISS)
 
         // TODO: Notify phone that notif is dismissed
     }
@@ -161,9 +131,14 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         } else if (!isScrollForward && rvPosition + 1 < notificationsViewModel.size().toInt()) {
             rvPosition += 1
         } else {
-            playSoundEffect(GLASS_SOUND_DISALLOWED)
+            playSoundEffect(Constants.GLASS_SOUND_DISALLOWED)
         }
 
+        if (notificationsViewModel.size().toInt() == 0) {
+            binding.tvNumNotifications.text = getString(R.string.no_notifications)
+        } else {
+            binding.tvNumNotifications.text = "${rvPosition + 1}/${notificationsViewModel.size()}"
+        }
         binding.rvNotifications.smoothScrollToPosition(rvPosition)
     }
 
@@ -185,7 +160,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         if (index in 0 until notifActionsSize) {
             actionRecyclerView.smoothScrollToPosition(index)
         } else {
-            playSoundEffect(GLASS_SOUND_DISALLOWED)
+            playSoundEffect(Constants.GLASS_SOUND_DISALLOWED)
         }
     }
 

@@ -46,7 +46,7 @@ class SourceConnectionService : Service() {
     inner class ConnectedThread(private val bluetoothDevice: BluetoothDevice) : Thread() {
         private val TAG = "ConnectedThread"
         private var isRunning = AtomicBoolean(true)
-        var bluetoothSocket: BluetoothSocket? = null
+        private var bluetoothSocket: BluetoothSocket? = null
 
         override fun run() {
             var isConnected = init()
