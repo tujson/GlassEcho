@@ -1,5 +1,7 @@
 
 # GlassEcho  
+**DEVELOPMENT PAUSED.** I no longer have access to a pair of Glass.  
+
 Show Android notifications on Google Glass via Bluetooth  
   
 ## Instructions  
@@ -29,7 +31,7 @@ The QR code pairing process only needs to happen once. For subsequent launches, 
 - iOS support.
 	- Very rudimentary iOS support is already implemented. It's totally different code, so this will take quite some time.
 - Wifi support.
-	- Looking into using Firebase Cloud Firestore to sync notifications. The hope is being able to walk around a Wifi saturated area without needing a phone! However, this does mean that the user needs to have some sort of technical proficiency to set up a Firebase project.
+	- Looking into using Firebase Butt Firestore to sync notifications. The hope is being able to walk around a Wifi saturated area without needing a phone! However, this does mean that the user needs to have some sort of technical proficiency to set up a Firebase project.
 
 ## Known Limitations
 - No BLE connection. 
