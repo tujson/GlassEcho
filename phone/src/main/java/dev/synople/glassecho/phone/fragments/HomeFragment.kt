@@ -110,9 +110,10 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
         val builder =
             NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
-                .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_stop))
-                .setContentTitle("GlassEcho Test Title")
-                .setContentText("GlassEcho Content Text\n${System.currentTimeMillis() / 1000}")
+                .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_notif_icon))
+                .setSmallIcon(R.drawable.ic_notif_icon)
+                .setContentTitle("Test Notification")
+                .setContentText("GlassEcho Content: ${System.currentTimeMillis() / 1000}")
                 .addAction(replyAction)
                 .addAction(R.drawable.ic_stop, "One", firstAction)
                 .addAction(R.drawable.ic_stop, "Two", secondAction)

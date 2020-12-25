@@ -103,7 +103,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getText(R.string.notification_title))
             .setContentText(getText(R.string.notification_message))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notif_icon)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .addAction(stopAction)
             .setContentIntent(pendingIntent)

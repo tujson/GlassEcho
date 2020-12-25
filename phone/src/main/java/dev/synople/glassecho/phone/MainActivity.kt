@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
     private fun buildNotificationServiceAlertDialog(): AlertDialog? {
         val alertDialogBuilder: AlertDialog.Builder = AlertDialog.Builder(this)
         alertDialogBuilder.setTitle("GlassEcho")
-        alertDialogBuilder.setMessage("Needs permission.")
+        alertDialogBuilder.setMessage("Needs permission to read notifications.")
         alertDialogBuilder.setPositiveButton(
             "Yes"
         ) { _, _ ->
