@@ -1,6 +1,5 @@
 
 # GlassEcho  
-**DEVELOPMENT PAUSED.** I no longer have access to a pair of Glass.  
 
 Show Android notifications on Google Glass via Bluetooth  
   
