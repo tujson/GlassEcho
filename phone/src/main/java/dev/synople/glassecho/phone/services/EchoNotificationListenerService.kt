@@ -1,6 +1,5 @@
 package dev.synople.glassecho.phone.services
 
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -75,9 +74,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
     }
 
     private fun showNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createNotificationChannel()
-        }
+        createNotificationChannel()
 
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent ->
@@ -112,16 +109,20 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         startForeground(ONGOING_NOTIFICATION_ID, notification)
     }
 
-    @SuppressLint("WrongConstant") // Android Studio is incorrectly complaining...
     private fun createNotificationChannel() {
-        val serviceChannel = NotificationChannel(
-            CHANNEL_ID,
-            "GlassEcho Service",
-            NotificationManager.IMPORTANCE_DEFAULT
-        )
-        getSystemService(NotificationManager::class.java)?.createNotificationChannel(
-            serviceChannel
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                CHANNEL_ID,
+                "GlassEcho Service",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Background service for GlassEcho"
+            }
+
+            getSystemService(NotificationManager::class.java)?.createNotificationChannel(
+                serviceChannel
+            )
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -289,7 +290,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
     }
 
     companion object {
-        const val CHANNEL_ID = "GlassEchoServiceChannel"
+        const val CHANNEL_ID = "GlassEcho Service"
         const val ONGOING_NOTIFICATION_ID = 281
     }
 }
