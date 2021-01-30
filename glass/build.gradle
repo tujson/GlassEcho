@@ -56,7 +56,8 @@ dependencies {
 
     implementation 'org.greenrobot:eventbus:3.2.0'
 
-    implementation 'com.journeyapps:zxing-android-embedded:4.1.0'
+    //noinspection GradleDependency: 3.6.0 is the last version that works with minSdkVersion 19
+    implementation 'com.journeyapps:zxing-android-embedded:3.6.0'
 
     kapt "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
 }
