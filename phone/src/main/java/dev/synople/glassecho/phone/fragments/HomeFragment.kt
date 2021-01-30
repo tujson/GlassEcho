@@ -20,7 +20,7 @@ import com.journeyapps.barcodescanner.BarcodeEncoder
 import dev.synople.glassecho.phone.NotificationActionReceiver
 import dev.synople.glassecho.phone.R
 import dev.synople.glassecho.phone.databinding.FragmentHomeBinding
-import dev.synople.glassecho.phone.services.GlassEchoNotificationListenerService
+import dev.synople.glassecho.phone.services.EchoNotificationListenerService
 
 
 private val TAG = HomeFragment::class.java.simpleName
@@ -149,7 +149,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private fun startEchoService() {
         val serviceIntent =
-            Intent(requireContext(), GlassEchoNotificationListenerService::class.java)
+            Intent(requireContext(), EchoNotificationListenerService::class.java)
         ContextCompat.startForegroundService(requireContext(), serviceIntent)
     }
 }

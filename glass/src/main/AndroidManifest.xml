@@ -34,7 +34,7 @@
         </activity>
 
         <service
-            android:name=".SourceConnectionService"
+            android:name=".EchoService"
             android:icon="@drawable/ic_glass_logo"
             android:label="@string/title_activity_live_card_service" />
 

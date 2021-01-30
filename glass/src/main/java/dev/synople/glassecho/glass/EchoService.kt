@@ -11,36 +11,40 @@ import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import java.io.IOException
 import java.io.ObjectInputStream
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-private val TAG = SourceConnectionService::class.java.simpleName
+private val TAG = EchoService::class.java.simpleName
 
-class SourceConnectionService : Service() {
+class EchoService : Service() {
 
     private lateinit var bluetoothDevice: BluetoothDevice
-    private var createSocketThread: ConnectedThread? = null
+    private var phoneConnection: ConnectedThread? = null
 
     override fun onBind(intent: Intent): IBinder? {
         return null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        createSocketThread?.broadcastDeviceStatus()
-            ?: (intent?.getParcelableExtra<BluetoothDevice>(Constants.EXTRA_BLUETOOTH_DEVICE)?.let {
+        if (phoneConnection == null || phoneConnection?.isConnected() == false) {
+            intent?.getParcelableExtra<BluetoothDevice>(Constants.EXTRA_BLUETOOTH_DEVICE)?.let {
                 bluetoothDevice = it
-
-                createSocketThread = ConnectedThread(bluetoothDevice).apply {
+                phoneConnection = ConnectedThread(it).apply {
                     start()
                 }
             } ?: run {
                 Log.v(TAG, "No BluetoothDevice found in extras")
-            })
-        return START_STICKY
+            }
+        } else {
+            phoneConnection?.broadcastDeviceStatus()
+        }
+
+        return START_REDELIVER_INTENT
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        createSocketThread?.cancel()
+        phoneConnection?.cancel()
     }
 
     inner class ConnectedThread(private val bluetoothDevice: BluetoothDevice) : Thread() {
@@ -55,6 +59,7 @@ class SourceConnectionService : Service() {
                 try {
                     val objectInputStream = ObjectInputStream(bluetoothSocket?.inputStream)
                     Intent().also { intent ->
+                        Log.v(TAG, "Broadcasting received message")
                         intent.action = Constants.INTENT_FILTER_NOTIFICATION
                         intent.putExtra(
                             Constants.MESSAGE,
@@ -75,7 +80,6 @@ class SourceConnectionService : Service() {
         private fun init(): Boolean {
             val isConnected: Boolean = establishConnection()?.let {
                 bluetoothSocket = it
-                Log.v(TAG, "init: connected to ${bluetoothSocket?.remoteDevice?.name}")
                 bluetoothSocket?.isConnected
             } ?: run {
                 false
@@ -89,7 +93,6 @@ class SourceConnectionService : Service() {
         private fun establishConnection(): BluetoothSocket? {
             try {
                 val socket = bluetoothDevice.createRfcommSocketToServiceRecord(glassEchoUUID)
-
                 socket.connect()
                 Log.v(
                     TAG,
@@ -107,7 +110,7 @@ class SourceConnectionService : Service() {
             try {
                 bluetoothSocket?.close()
                 isRunning.set(false)
-                Log.v(TAG, "Cancel")
+                Log.v(TAG, "Cancelling ConnectedThread")
             } catch (e: IOException) {
                 Log.e(TAG, "cancel", e)
             } catch (e: RuntimeException) {
@@ -115,8 +118,11 @@ class SourceConnectionService : Service() {
             }
         }
 
+        fun isConnected() = isRunning.get() && bluetoothSocket?.isConnected == true
+
         fun broadcastDeviceStatus() {
             Intent().also { statusIntent ->
+                Log.v(TAG, "broadcastDeviceStatus: ${bluetoothSocket?.isConnected}")
                 statusIntent.action = Constants.INTENT_FILTER_DEVICE_CONNECT_STATUS
                 statusIntent.putExtra(
                     Constants.EXTRA_DEVICE_IS_CONNECTED,

@@ -26,40 +26,33 @@ import dev.synople.glassecho.phone.GlassEchoBroadcastReceiver
 import dev.synople.glassecho.phone.MainActivity
 import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import java.io.IOException
 import java.io.ObjectOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
-import kotlin.coroutines.CoroutineContext
 
-private val TAG = GlassEchoNotificationListenerService::class.java.simpleName
+private val TAG = EchoNotificationListenerService::class.java.simpleName
 
-class GlassEchoNotificationListenerService : NotificationListenerService(), CoroutineScope {
+class EchoNotificationListenerService : NotificationListenerService() {
 
-    private var coroutineJob = Job()
-    override val coroutineContext: CoroutineContext
-        get() = Dispatchers.IO + coroutineJob
-
-    private var glass: ConnectedThread? = null
+    private var glassConnection: ConnectedThread? = null
     private var sharedPref: SharedPreferences? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.getStringExtra(Constants.FROM_NOTIFICATION) == Constants.NOTIFICATION_ACTION_STOP) {
-            stopSelf()
             stopForeground(true)
+            stopSelf()
 
             return Service.START_NOT_STICKY
         }
+
         sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
 
         showNotification()
 
-        if (glass == null) {
-            glass = ConnectedThread()
-            glass?.start()
+        if (glassConnection == null) {
+            glassConnection = ConnectedThread()
+            glassConnection?.start()
         }
 
         return Service.START_STICKY
@@ -67,10 +60,11 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
     override fun onDestroy() {
         super.onDestroy()
-        coroutineJob.cancel()
-        glass?.cancel()
-        stopSelf()
+
+        glassConnection?.cancel()
+
         stopForeground(true)
+        stopSelf()
     }
 
     private fun showNotification() {
@@ -125,18 +119,15 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
         }
     }
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        if (sbn != null
-            && sharedPref?.getBoolean(sbn.packageName, false) == true
-            && isWantedNotification(sbn)
-        ) {
-            glass?.write(convertNotificationToEcho(sbn))
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
+        if (glassConnection?.isConnected() == true && isWantedNotification(sbn)) {
+            glassConnection?.write(convertNotificationToEcho(sbn))
         }
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        if (sbn != null && sharedPref?.getBoolean(sbn.packageName, false) == true) {
-            glass?.write(convertNotificationToEcho(sbn, isRemoved = true))
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        if (glassConnection?.isConnected() == true && isWantedNotification(sbn)) {
+            glassConnection?.write(convertNotificationToEcho(sbn, isRemoved = true))
         }
     }
 
@@ -146,6 +137,10 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
             || sbn.notification.flags and Notification.FLAG_LOCAL_ONLY != 0
             || sbn.notification.flags and NotificationCompat.FLAG_GROUP_SUMMARY != 0
         ) {
+            return false
+        }
+
+        if (sharedPref?.getBoolean(sbn.packageName, false) == false) {
             return false
         }
 
@@ -219,7 +214,7 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
     inner class ConnectedThread : Thread() {
         private val TAG = "ConnectedThread"
-        private var isRunning = AtomicBoolean(true)
+        private val isRunning = AtomicBoolean(true)
         private var bluetoothSocket: BluetoothSocket? = null
 
         override fun run() {
@@ -263,18 +258,21 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
 
         fun write(echoNotification: EchoNotification) {
             thread {
-                try {
-                    bluetoothSocket?.let {
-                        val objectOutputStream = ObjectOutputStream(it.outputStream)
-                        objectOutputStream.writeObject(echoNotification)
+                if (isRunning.get()) {
+                    try {
+                        Log.v(TAG, "write ${bluetoothSocket?.isConnected}")
+                        bluetoothSocket?.let {
+                            val objectOutputStream = ObjectOutputStream(it.outputStream)
+                            objectOutputStream.writeObject(echoNotification)
+                        }
+                    } catch (e: IOException) {
+                        Log.e(
+                            TAG,
+                            "Write (bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}",
+                            e
+                        )
+                        bluetoothSocket = establishConnection()
                     }
-                } catch (e: IOException) {
-                    Log.e(
-                        TAG,
-                        "Write (bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}",
-                        e
-                    )
-                    bluetoothSocket = establishConnection()
                 }
             }
         }
@@ -287,6 +285,8 @@ class GlassEchoNotificationListenerService : NotificationListenerService(), Coro
                 Log.e(TAG, "cancel", e)
             }
         }
+
+        fun isConnected() = isRunning.get() && bluetoothSocket?.isConnected == true
     }
 
     companion object {

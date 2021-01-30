@@ -20,7 +20,7 @@ import dev.synople.glassecho.glass.Constants
 import dev.synople.glassecho.glass.GlassGesture
 import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.R
-import dev.synople.glassecho.glass.SourceConnectionService
+import dev.synople.glassecho.glass.EchoService
 import dev.synople.glassecho.glass.databinding.FragmentConnectBinding
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -52,7 +52,7 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
 
     private var deviceStatusReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            intent?.getBooleanExtra(Constants.EXTRA_DEVICE_IS_CONNECTED, false)
+            intent?.extras?.getBoolean(Constants.EXTRA_DEVICE_IS_CONNECTED)
                 ?.let { isConnected ->
                     if (isConnected) {
                         val audio =
@@ -82,7 +82,6 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
                                     NotificationTimelineFragment.newInstance()
                                 )
                                 .commit()
-
                         }
 
                         requireActivity().unregisterReceiver(this)
@@ -91,12 +90,12 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
                         requireActivity().stopService(
                             Intent(
                                 requireActivity(),
-                                SourceConnectionService::class.java
+                                EchoService::class.java
                             )
                         )
 
                         binding.tvConnectStatus.text =
-                            "Failed to connect. Please make sure GlassEcho is running on your phone."
+                            "Failed to connect to $deviceName. Please make sure GlassEcho is running on your phone."
                     }
                 }
         }
@@ -153,7 +152,9 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
         if (deviceName.isNotEmpty() && deviceAddress.isNotEmpty()) {
             val pairedDevice = checkPairedDevices(deviceName)
             pairedDevice?.let {
-                startBluetoothService(it)
+                binding.tvConnectStatus.text = "Attempting to connect to \"$deviceName\"..."
+                startBluetoothService(pairedDevice)
+
                 return
             } ?: run {
                 // Device is no longer in paired devices list
@@ -162,10 +163,12 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
                     putString(Constants.SHARED_PREF_DEVICE_ADDRESS, "")
                     apply()
                 }
-            }
-        }
 
-        startQrCodeScanner()
+                startQrCodeScanner()
+            }
+        } else {
+            startQrCodeScanner()
+        }
     }
 
     override fun onDestroyView() {
@@ -219,7 +222,7 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
             IntentFilter(Constants.INTENT_FILTER_DEVICE_CONNECT_STATUS)
         )
 
-        requireActivity().startService(Intent(activity, SourceConnectionService::class.java).apply {
+        requireActivity().startService(Intent(activity, EchoService::class.java).apply {
             putExtra(
                 Constants.EXTRA_BLUETOOTH_DEVICE, bluetoothDevice
             )
@@ -242,12 +245,12 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
         try {
             requireActivity().unregisterReceiver(pairDeviceReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.v(TAG, "pairDeviceReceiver was never registered", e)
+            Log.v(TAG, "pairDeviceReceiver was never registered")
         }
         try {
             requireActivity().unregisterReceiver(deviceStatusReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.v(TAG, "deviceStatusReceiver was never registered", e)
+            Log.v(TAG, "deviceStatusReceiver was never registered")
         }
         BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
     }
@@ -258,7 +261,7 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
             barcodeResult.contents?.let { barcodeContents ->
                 requireActivity().runOnUiThread {
                     binding.tvConnectStatus.text =
-                        "Attempting to connect to \"$barcodeContents...\""
+                        "Attempting to connect to \"$barcodeContents\"..."
                 }
                 connectToDevice(barcodeContents)
             } ?: run {

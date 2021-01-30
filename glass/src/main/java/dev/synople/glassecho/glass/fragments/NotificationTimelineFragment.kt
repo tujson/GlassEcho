@@ -67,26 +67,23 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
             binding.executePendingBindings()
         })
 
+        EventBus.getDefault().register(this)
         requireActivity().registerReceiver(
             notificationReceiver,
             IntentFilter(Constants.INTENT_FILTER_NOTIFICATION)
         )
-
-        EventBus.getDefault().register(this)
-
     }
 
     override fun onDestroyView() {
+        super.onDestroyView()
+
         _binding = null
         EventBus.getDefault().unregister(this)
-
         try {
             requireActivity().unregisterReceiver(notificationReceiver)
         } catch (e: IllegalArgumentException) {
             Log.v(TAG, "notificationReceiver not registered", e)
         }
-
-        super.onDestroyView()
     }
 
     @Subscribe
