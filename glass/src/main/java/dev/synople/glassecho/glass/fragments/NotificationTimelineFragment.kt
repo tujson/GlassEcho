@@ -1,5 +1,6 @@
 package dev.synople.glassecho.glass.fragments
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -36,7 +37,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
             intent?.getParcelableExtra<EchoNotification>(Constants.MESSAGE)?.let {
                 Log.v(TAG, "Received EchoNotification: ${it.id}")
 
-                notificationsViewModel.handleNotification(it)
+//                notificationsViewModel.handleNotification(it)
 
                 if (!it.isRemoved) {
                     playSoundEffect(Constants.GLASS_SOUND_TAP)
@@ -49,13 +50,14 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
     private var adapter: NotificationAdapter = NotificationAdapter()
     private var rvPosition = 0
 
+    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         _binding = FragmentNotificationTimelineBinding.bind(view)
         binding.rvNotifications.adapter = adapter
 
-        notificationsViewModel.getNotifications().observe(viewLifecycleOwner, {
+        notificationsViewModel.notifications.observe(viewLifecycleOwner, {
             adapter.setNotifications(it)
 
             if (it.size == 0) {
@@ -122,16 +124,17 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         // TODO: Notify phone that notif is dismissed
     }
 
+    @SuppressLint("SetTextI18n")
     private fun scrollNotifications(isScrollForward: Boolean) {
         if (isScrollForward && rvPosition - 1 >= 0) {
             rvPosition -= 1
-        } else if (!isScrollForward && rvPosition + 1 < notificationsViewModel.size().toInt()) {
+        } else if (!isScrollForward && rvPosition + 1 < notificationsViewModel.size()) {
             rvPosition += 1
         } else {
             playSoundEffect(Constants.GLASS_SOUND_DISALLOWED)
         }
 
-        if (notificationsViewModel.size().toInt() == 0) {
+        if (notificationsViewModel.size() == 0) {
             binding.tvNumNotifications.text = getString(R.string.no_notifications)
         } else {
             binding.tvNumNotifications.text = "${rvPosition + 1}/${notificationsViewModel.size()}"
@@ -153,7 +156,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         }
 
         val notifActionsSize =
-            notificationsViewModel.getNotifications().value?.get(rvPosition)?.actions?.size ?: 0
+            notificationsViewModel.notifications.value?.get(rvPosition)?.actions?.size ?: 0
         if (index in 0 until notifActionsSize) {
             actionRecyclerView.smoothScrollToPosition(index)
         } else {

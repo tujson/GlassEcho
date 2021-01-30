@@ -3,7 +3,9 @@ package dev.synople.glassecho.glass
 import android.app.Service
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.IBinder
 import android.os.Parcelable
 import android.util.Log
@@ -47,6 +49,16 @@ class EchoService : Service() {
         phoneConnection?.cancel()
     }
 
+    private fun handleNotification(echoNotification: EchoNotification) {
+        (applicationContext as EchoApplication).getRepository()
+            .handleNotification(echoNotification)
+
+        val audio = applicationContext?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audio.playSoundEffect(Constants.GLASS_SOUND_TAP)
+
+        // If we wanted the screen to wake up upon receiving a notification, it should be done here
+    }
+
     inner class ConnectedThread(private val bluetoothDevice: BluetoothDevice) : Thread() {
         private val TAG = "ConnectedThread"
         private var isRunning = AtomicBoolean(true)
@@ -58,15 +70,9 @@ class EchoService : Service() {
             while (isConnected && isRunning.get()) {
                 try {
                     val objectInputStream = ObjectInputStream(bluetoothSocket?.inputStream)
-                    Intent().also { intent ->
-                        Log.v(TAG, "Broadcasting received message")
-                        intent.action = Constants.INTENT_FILTER_NOTIFICATION
-                        intent.putExtra(
-                            Constants.MESSAGE,
-                            (objectInputStream.readObject() as EchoNotification) as Parcelable
-                        )
-                        sendBroadcast(intent)
-                    }
+
+                    val echoNotification = (objectInputStream.readObject() as EchoNotification)
+                    handleNotification(echoNotification)
                 } catch (e: IOException) {
                     Log.e(TAG, "Potential socket disconnect. Attempting to reconnect", e)
                     // Attempt to reconnect

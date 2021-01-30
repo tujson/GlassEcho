@@ -20,10 +20,6 @@ object BindingAdapters {
     }
 }
 
-fun <T> MutableLiveData<T>.notifyObserver() {
-    this.value = this.value
-}
-
 object Constants {
     const val SHARED_PREF = "dev.synople.glassecho.phone.PREFERENCE_FILE_KEY"
     const val SHARED_PREF_DEVICE_NAME = "dev.synople.glassecho.phone.sharedpref.DEVICE_NAME"
