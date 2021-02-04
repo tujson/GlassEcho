@@ -9,37 +9,32 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.ImageView
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.navigation.findNavController
 import com.google.zxing.BarcodeFormat
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import dev.synople.glassecho.phone.NotificationActionReceiver
 import dev.synople.glassecho.phone.R
-import dev.synople.glassecho.phone.databinding.FragmentHomeBinding
+import dev.synople.glassecho.phone.databinding.FragmentStatusBinding
 import dev.synople.glassecho.phone.services.EchoNotificationListenerService
 
-
-private val TAG = HomeFragment::class.java.simpleName
+private val TAG = StatusFragment::class.java.simpleName
 const val TEST_NOTIFICATION_ACTION = "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION"
 const val TEST_NOTIFICATION_ACTION_REPLY =
     "dev.synople.glassecho.phone.TEST_NOTIFICATION_ACTION_REPLY"
+const val TEST_NOTIFICATION_ID = 157
+const val TEST_NOTIFICATION_CHANNEL_ID = "dev.synople.glassecho.phone.test"
 
-class HomeFragment : Fragment(R.layout.fragment_home) {
-
-    private var _binding: FragmentHomeBinding? = null
-    private val binding get() = _binding!!
-
-    private val CHANNEL_ID = "dev.synople.glassecho.phone"
+class StatusFragment : Fragment(R.layout.fragment_status) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        _binding = FragmentHomeBinding.bind(view)
-        binding.apply {
+        FragmentStatusBinding.bind(view).apply {
             btnConnect.setOnClickListener {
                 val discoverableIntent: Intent =
                     Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
@@ -49,26 +44,16 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
                 startEchoService()
 
-                setQrCode()
-            }
-
-            btnNotifications.setOnClickListener {
-                it.findNavController()
-                    .navigate(HomeFragmentDirections.actionHomeFragmentToNotificationPickerFragment())
+                setQrCode(ivQrCode)
             }
 
             btnTestNotif.setOnClickListener {
-                showNotification()
+                showTestNotification()
             }
         }
     }
 
-    override fun onDestroyView() {
-        _binding = null
-        super.onDestroyView()
-    }
-
-    private fun showNotification() {
+    private fun showTestNotification() {
         createNotificationChannel()
 
         val remoteInput = RemoteInput.Builder(TEST_NOTIFICATION_ACTION_REPLY).run {
@@ -108,7 +93,10 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         )
 
         val builder =
-            NotificationCompat.Builder(requireContext().applicationContext, CHANNEL_ID)
+            NotificationCompat.Builder(
+                requireContext().applicationContext,
+                TEST_NOTIFICATION_CHANNEL_ID
+            )
                 .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_notif_icon))
                 .setSmallIcon(R.drawable.ic_notif_icon)
                 .setContentTitle("Test Notification")
@@ -119,14 +107,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         with(NotificationManagerCompat.from(requireContext())) {
-            notify(156, builder.build())
+            notify(TEST_NOTIFICATION_ID, builder.build())
         }
     }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID,
+                TEST_NOTIFICATION_CHANNEL_ID,
                 "GlassEcho Testing Channel",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
@@ -140,11 +128,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         }
     }
 
-    private fun setQrCode() {
+    private fun setQrCode(imageView: ImageView) {
         val bluetoothName = BluetoothAdapter.getDefaultAdapter().name
         val qrCodeBitmap =
             BarcodeEncoder().encodeBitmap(bluetoothName, BarcodeFormat.QR_CODE, 800, 800)
-        binding.ivQrCode.setImageBitmap(qrCodeBitmap)
+        imageView.setImageBitmap(qrCodeBitmap)
     }
 
     private fun startEchoService() {

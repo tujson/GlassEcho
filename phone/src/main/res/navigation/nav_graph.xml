@@ -3,24 +3,23 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/homeFragment">
+    app:startDestination="@id/statusFragment">
 
     <fragment
-        android:id="@+id/homeFragment"
-        android:name="dev.synople.glassecho.phone.fragments.HomeFragment"
-        android:label="fragment_home"
-        tools:layout="@layout/fragment_home">
-        <action
-            android:id="@+id/action_homeFragment_to_notificationPickerFragment"
-            app:destination="@id/notificationPickerFragment" />
-    </fragment>
+        android:id="@+id/statusFragment"
+        android:name="dev.synople.glassecho.phone.fragments.StatusFragment"
+        android:label="Status"
+        tools:layout="@layout/fragment_status" />
+
     <fragment
-        android:id="@+id/notificationPickerFragment"
-        android:name="dev.synople.glassecho.phone.fragments.NotificationPickerFragment"
-        android:label="fragment_notification_picker"
-        tools:layout="@layout/fragment_notification_picker">
-        <action
-            android:id="@+id/action_notificationPickerFragment_to_homeFragment"
-            app:destination="@id/homeFragment" />
-    </fragment>
+        android:id="@+id/notificationListFragment"
+        android:name="dev.synople.glassecho.phone.fragments.NotificationListFragment"
+        android:label="Notification List"
+        tools:layout="@layout/fragment_notification_list"/>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="dev.synople.glassecho.phone.fragments.SettingsFragment"
+        android:label="Settings"
+        tools:layout="@layout/fragment_settings"/>
 </navigation>

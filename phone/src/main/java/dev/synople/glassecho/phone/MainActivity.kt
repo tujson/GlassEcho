@@ -8,6 +8,11 @@ import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import android.text.TextUtils
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 
 class MainActivity : AppCompatActivity() {
@@ -16,6 +21,21 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        if (!isNotificationServiceEnabled()) {
+            buildNotificationServiceAlertDialog()?.show()
+        }
+
+        val navController = findNavController(R.id.nav_host_fragment)
+        findViewById<BottomNavigationView>(R.id.bottom_nav).setupWithNavController(navController)
+        val appBarConfiguration = AppBarConfiguration(
+            topLevelDestinationIds = setOf(
+                R.id.statusFragment,
+                R.id.notificationListFragment,
+                R.id.settingsFragment,
+            )
+        )
+        setupActionBarWithNavController(navController, appBarConfiguration)
 
         if (!isNotificationServiceEnabled()) {
             buildNotificationServiceAlertDialog()?.show()

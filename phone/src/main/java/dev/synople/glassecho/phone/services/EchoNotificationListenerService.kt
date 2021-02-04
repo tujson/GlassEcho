@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
 private val TAG = EchoNotificationListenerService::class.java.simpleName
+const val REPLY_KEYWORD = "reply"
 
 class EchoNotificationListenerService : NotificationListenerService() {
 
@@ -186,6 +187,11 @@ class EchoNotificationListenerService : NotificationListenerService() {
         val actions = mutableListOf<String>()
         sbn.notification.actions?.forEach {
             actions.add(it.title.toString())
+            it.remoteInputs.forEach { remoteInput ->
+                if (remoteInput.resultKey.toLowerCase().contains(REPLY_KEYWORD)) {
+
+                }
+            }
         }
 
         return EchoNotification(
@@ -256,14 +262,13 @@ class EchoNotificationListenerService : NotificationListenerService() {
             return socket
         }
 
-        fun write(echoNotification: EchoNotification) {
+        fun write(message: Any) {
             thread {
                 if (isRunning.get()) {
                     try {
-                        Log.v(TAG, "write ${bluetoothSocket?.isConnected}")
                         bluetoothSocket?.let {
                             val objectOutputStream = ObjectOutputStream(it.outputStream)
-                            objectOutputStream.writeObject(echoNotification)
+                            objectOutputStream.writeObject(message)
                         }
                     } catch (e: IOException) {
                         Log.e(

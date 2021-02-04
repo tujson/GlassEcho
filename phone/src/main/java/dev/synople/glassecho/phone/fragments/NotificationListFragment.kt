@@ -11,13 +11,13 @@ import androidx.fragment.app.Fragment
 import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
 import dev.synople.glassecho.phone.adapters.NotificationAdapter
-import dev.synople.glassecho.phone.databinding.FragmentNotificationPickerBinding
+import dev.synople.glassecho.phone.databinding.FragmentNotificationListBinding
 import java.util.Collections
 
 /**
  * Lets users pick which apps show notifications on Glass
  */
-class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picker),
+class NotificationListFragment : Fragment(R.layout.fragment_notification_list),
     CompoundButton.OnCheckedChangeListener {
 
     private lateinit var installedApps: List<ResolveInfo>
@@ -34,7 +34,7 @@ class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picke
             Context.MODE_PRIVATE
         )!!
 
-        FragmentNotificationPickerBinding.bind(view).apply {
+        FragmentNotificationListBinding.bind(view).apply {
             adapter = NotificationAdapter(
                 installedApps,
                 requireContext().packageManager,
@@ -46,13 +46,13 @@ class NotificationPickerFragment : Fragment(R.layout.fragment_notification_picke
                 } else if (!switchAllOn.isChecked && isChecked && areAllAppsChecked(installedApps)) {
                     switchAllOn.isChecked = true
                 }
-                switchAllOn.setOnCheckedChangeListener(this@NotificationPickerFragment)
+                switchAllOn.setOnCheckedChangeListener(this@NotificationListFragment)
             }
             rvApps.adapter = adapter
 
             switchAllOn.isChecked = areAllAppsChecked(installedApps)
 
-            switchAllOn.setOnCheckedChangeListener(this@NotificationPickerFragment)
+            switchAllOn.setOnCheckedChangeListener(this@NotificationListFragment)
         }
     }
 

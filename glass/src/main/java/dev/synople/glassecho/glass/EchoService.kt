@@ -7,13 +7,11 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.os.IBinder
-import android.os.Parcelable
 import android.util.Log
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import java.io.IOException
 import java.io.ObjectInputStream
-import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 private val TAG = EchoService::class.java.simpleName
@@ -70,9 +68,16 @@ class EchoService : Service() {
             while (isConnected && isRunning.get()) {
                 try {
                     val objectInputStream = ObjectInputStream(bluetoothSocket?.inputStream)
+                    val echoMessage = objectInputStream.readObject()
 
-                    val echoNotification = (objectInputStream.readObject() as EchoNotification)
-                    handleNotification(echoNotification)
+                    if (echoMessage is EchoNotification) {
+                        handleNotification(echoMessage)
+                    } else {
+                        Log.v(
+                            TAG,
+                            "Received unknown message of type ${echoMessage.javaClass.simpleName}: $echoMessage"
+                        )
+                    }
                 } catch (e: IOException) {
                     Log.e(TAG, "Potential socket disconnect. Attempting to reconnect", e)
                     // Attempt to reconnect

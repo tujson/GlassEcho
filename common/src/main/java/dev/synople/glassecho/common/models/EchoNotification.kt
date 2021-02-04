@@ -3,9 +3,6 @@ package dev.synople.glassecho.common.models
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Parcelable
-import android.util.Base64
-import android.util.Log
-import dev.synople.glassecho.common.*
 import kotlinx.android.parcel.Parcelize
 import java.io.ByteArrayOutputStream
 import java.io.Serializable
