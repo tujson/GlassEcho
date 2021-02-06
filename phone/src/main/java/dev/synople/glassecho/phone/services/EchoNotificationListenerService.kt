@@ -187,11 +187,13 @@ class EchoNotificationListenerService : NotificationListenerService() {
         val actions = mutableListOf<String>()
         sbn.notification.actions?.forEach {
             actions.add(it.title.toString())
-            it.remoteInputs.forEach { remoteInput ->
-                if (remoteInput.resultKey.toLowerCase().contains(REPLY_KEYWORD)) {
-
-                }
-            }
+//            if (it.remoteInputs != null) {
+//                it.remoteInputs.forEach { remoteInput ->
+//                    if (remoteInput.resultKey.toLowerCase().contains(REPLY_KEYWORD)) {
+//
+//                    }
+//                }
+//            }
         }
 
         return EchoNotification(
