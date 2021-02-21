@@ -21,13 +21,16 @@ import androidx.core.app.NotificationCompat
 import dev.synople.glassecho.common.APP_ICON_SIZE
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
+import dev.synople.glassecho.common.models.EchoNotificationAction
 import dev.synople.glassecho.phone.Constants
 import dev.synople.glassecho.phone.GlassEchoBroadcastReceiver
 import dev.synople.glassecho.phone.MainActivity
 import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
 import java.io.IOException
+import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.io.Serializable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
@@ -38,6 +41,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
 
     private var glassConnection: ConnectedThread? = null
     private var sharedPref: SharedPreferences? = null
+    private val notifications: MutableMap<String, StatusBarNotification> = mutableMapOf()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.getStringExtra(Constants.FROM_NOTIFICATION) == Constants.NOTIFICATION_ACTION_STOP) {
@@ -63,6 +67,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
         super.onDestroy()
 
         glassConnection?.cancel()
+        notifications.clear()
 
         stopForeground(true)
         stopSelf()
@@ -122,13 +127,17 @@ class EchoNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (glassConnection?.isConnected() == true && isWantedNotification(sbn)) {
+            val echoNotification = convertNotificationToEcho(sbn)
+            notifications[echoNotification.id] = sbn
             glassConnection?.write(convertNotificationToEcho(sbn))
         }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         if (glassConnection?.isConnected() == true && isWantedNotification(sbn)) {
-            glassConnection?.write(convertNotificationToEcho(sbn, isRemoved = true))
+            val echoNotification = convertNotificationToEcho(sbn, isRemoved = true)
+            notifications.remove(echoNotification.id)
+            glassConnection?.write(echoNotification)
         }
     }
 
@@ -192,7 +201,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
 //                    if (remoteInput.resultKey.toLowerCase().contains(REPLY_KEYWORD)) {
 //
 //                    }
-//                }
+//                }R
 //            }
         }
 
@@ -220,6 +229,21 @@ class EchoNotificationListenerService : NotificationListenerService() {
         return Bitmap.createScaledBitmap(bmp, APP_ICON_SIZE, APP_ICON_SIZE, false)
     }
 
+    private fun handleNotificationAction(action: EchoNotificationAction) {
+        val sbn = notifications[action.id]
+
+        if (sbn == null) {
+            Log.e(TAG, "Notification not found: ${action.id}")
+            return
+        }
+
+        sbn.notification.actions?.forEach {
+            if (it.title == action.actionName) {
+                it.actionIntent.send()
+            }
+        }
+    }
+
     inner class ConnectedThread : Thread() {
         private val TAG = "ConnectedThread"
         private val isRunning = AtomicBoolean(true)
@@ -233,10 +257,13 @@ class EchoNotificationListenerService : NotificationListenerService() {
 
             while (bluetoothSocket?.isConnected == true && isRunning.get()) {
                 try {
-                    bluetoothSocket?.inputStream?.let { inputStream ->
-                        val bytes = inputStream.read(buffer)
-                        val incomingMessage = String(buffer, 0, bytes)
-                        Log.v(TAG, "incomingMessage: $incomingMessage")
+                    val objectInputStream = ObjectInputStream(bluetoothSocket?.inputStream)
+                    val message = objectInputStream.readObject()
+
+                    if (message is EchoNotificationAction) {
+                        handleNotificationAction(message)
+                    } else {
+                        Log.v(TAG, "Received unknown message: $message")
                     }
                 } catch (e: IOException) {
                     Log.e(TAG, "run()", e)
@@ -264,7 +291,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
             return socket
         }
 
-        fun write(message: Any) {
+        fun write(message: Serializable) {
             thread {
                 if (isRunning.get()) {
                     try {
@@ -275,7 +302,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
                     } catch (e: IOException) {
                         Log.e(
                             TAG,
-                            "Write (bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}",
+                            "Write (bluetoothSocket isConnected: ${bluetoothSocket?.isConnected})",
                             e
                         )
                         bluetoothSocket = establishConnection()

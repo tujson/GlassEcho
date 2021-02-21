@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.Bundle
+import android.os.Parcelable
 import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
@@ -14,7 +15,9 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dev.synople.glassecho.common.models.EchoNotification
+import dev.synople.glassecho.common.models.EchoNotificationAction
 import dev.synople.glassecho.glass.Constants
+import dev.synople.glassecho.glass.EchoService
 import dev.synople.glassecho.glass.GlassGesture
 import dev.synople.glassecho.glass.GlassGestureDetector
 import dev.synople.glassecho.glass.R
@@ -114,14 +117,38 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
 
     private fun executeNotification() {
         playSoundEffect(Constants.GLASS_SOUND_TAP)
-        // TODO: Notif action
+
+        val notification = notificationsViewModel.notifications.value?.get(rvPosition) ?: return
+
+        val actionRecyclerView = binding.rvNotifications.getChildAt(rvPosition)
+            .findViewById<RecyclerView>(R.id.rvActions)
+        var actionIndex =
+            (actionRecyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
+        val notificationAction = notification.actions[actionIndex]
+
+        val echoNotificationAction =
+            EchoNotificationAction(notification.id, notificationAction)
+
+        write(echoNotificationAction)
     }
 
     private fun dismissNotification() {
         notificationsViewModel.remove(rvPosition)
         playSoundEffect(Constants.GLASS_SOUND_DISMISS)
 
-        // TODO: Notify phone that notif is dismissed
+        val notification = notificationsViewModel.notifications.value?.get(rvPosition) ?: return
+
+        val echoNotificationAction = EchoNotificationAction(notification.id, isDismiss = true)
+
+        write(echoNotificationAction)
+    }
+
+    private fun write(message: Parcelable) {
+        requireActivity().startService(Intent(activity, EchoService::class.java).apply {
+            putExtra(
+                Constants.EXTRA_NOTIFICATION_ACTION, message
+            )
+        })
     }
 
     @SuppressLint("SetTextI18n")

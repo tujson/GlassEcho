@@ -3,7 +3,7 @@ package dev.synople.glassecho.common.models
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Parcelable
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.Parcelize
 import java.io.ByteArrayOutputStream
 import java.io.Serializable
 

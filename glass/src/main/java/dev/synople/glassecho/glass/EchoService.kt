@@ -10,9 +10,13 @@ import android.os.IBinder
 import android.util.Log
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
+import dev.synople.glassecho.common.models.EchoNotificationAction
 import java.io.IOException
 import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 
 private val TAG = EchoService::class.java.simpleName
 
@@ -36,7 +40,12 @@ class EchoService : Service() {
                 Log.v(TAG, "No BluetoothDevice found in extras")
             }
         } else {
-            phoneConnection?.broadcastDeviceStatus()
+            intent?.getParcelableExtra<EchoNotificationAction>(Constants.EXTRA_NOTIFICATION_ACTION)
+                ?.let {
+                    phoneConnection?.write(it)
+                } ?: run {
+                phoneConnection?.broadcastDeviceStatus()
+            }
         }
 
         return START_REDELIVER_INTENT
@@ -86,6 +95,27 @@ class EchoService : Service() {
             }
 
             cancel()
+        }
+
+        fun write(message: Serializable) {
+            thread {
+                if (isRunning.get()) {
+                    try {
+                        Log.v(TAG, "Writing: $message")
+                        bluetoothSocket?.let {
+                            val objectOutputStream = ObjectOutputStream(it.outputStream)
+                            objectOutputStream.writeObject(message)
+                        }
+                    } catch (e: IOException) {
+                        Log.e(
+                            TAG,
+                            "Write (bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}",
+                            e
+                        )
+                        bluetoothSocket = establishConnection()
+                    }
+                }
+            }
         }
 
         private fun init(): Boolean {
