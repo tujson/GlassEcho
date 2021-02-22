@@ -199,9 +199,9 @@ class EchoNotificationListenerService : NotificationListenerService() {
 //            if (it.remoteInputs != null) {
 //                it.remoteInputs.forEach { remoteInput ->
 //                    if (remoteInput.resultKey.toLowerCase().contains(REPLY_KEYWORD)) {
-//
+//                        // TODO: Should set a special flag for the action to be added.
 //                    }
-//                }R
+//                }
 //            }
         }
 
@@ -234,6 +234,11 @@ class EchoNotificationListenerService : NotificationListenerService() {
 
         if (sbn == null) {
             Log.e(TAG, "Notification not found: ${action.id}")
+            return
+        }
+
+        if (action.isDismiss) {
+            cancelNotification(sbn.key)
             return
         }
 

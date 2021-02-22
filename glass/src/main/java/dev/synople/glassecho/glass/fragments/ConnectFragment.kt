@@ -15,12 +15,13 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.google.zxing.integration.android.IntentIntegrator
-import dev.synople.glassecho.glass.Constants
-import dev.synople.glassecho.glass.GlassGesture
-import dev.synople.glassecho.glass.GlassGestureDetector
-import dev.synople.glassecho.glass.R
+import dev.synople.glassecho.glass.utils.Constants
 import dev.synople.glassecho.glass.EchoService
+import dev.synople.glassecho.glass.utils.GlassGesture
+import dev.synople.glassecho.glass.utils.GlassGestureDetector
+import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.databinding.FragmentConnectBinding
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -75,13 +76,7 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
                                 apply()
                             }
 
-                            supportFragmentManager
-                                .beginTransaction()
-                                .replace(
-                                    R.id.frameLayoutMain,
-                                    NotificationTimelineFragment.newInstance()
-                                )
-                                .commit()
+                            findNavController().navigate(ConnectFragmentDirections.actionConnectFragmentToNotificationTimelineFragment())
                         }
 
                         requireActivity().unregisterReceiver(this)

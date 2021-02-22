@@ -1,4 +1,4 @@
-package dev.synople.glassecho.glass
+package dev.synople.glassecho.glass.utils
 
 import android.graphics.Bitmap
 import android.widget.ImageView

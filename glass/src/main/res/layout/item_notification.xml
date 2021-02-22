@@ -57,7 +57,6 @@
             android:id="@+id/ivAppIcon"
             android:layout_width="30dp"
             android:layout_height="30dp"
-            android:layout_above="@id/rvActions"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
             bind:imageBitmap="@{echoNotification.appIconBitmap}"
@@ -67,7 +66,6 @@
             android:id="@+id/tvAppName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_above="@id/rvActions"
             android:layout_alignTop="@id/ivAppIcon"
             android:layout_alignParentBottom="true"
             android:layout_marginEnd="8dp"
@@ -76,16 +74,6 @@
             android:text="@{echoNotification.appName}"
             android:textSize="22sp"
             tools:src="GlassEcho" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvActions"
-            android:layout_width="match_parent"
-            android:layout_height="30dp"
-            android:layout_alignParentBottom="true"
-            android:layout_toStartOf="@id/tvAppName"
-            android:orientation="horizontal"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            bind:notificationActionAdapter="@{echoNotification.actions}" />
 
     </RelativeLayout>
 

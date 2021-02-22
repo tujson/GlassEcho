@@ -1,4 +1,4 @@
-package dev.synople.glassecho.glass
+package dev.synople.glassecho.glass.utils
 
 /**
  * Wrapper for GlassGestureDetector.Gesture

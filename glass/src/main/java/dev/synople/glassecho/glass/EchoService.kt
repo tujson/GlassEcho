@@ -11,6 +11,7 @@ import android.util.Log
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.common.models.EchoNotificationAction
+import dev.synople.glassecho.glass.utils.Constants
 import java.io.IOException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
@@ -60,8 +61,10 @@ class EchoService : Service() {
         (applicationContext as EchoApplication).getRepository()
             .handleNotification(echoNotification)
 
-        val audio = applicationContext?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audio.playSoundEffect(Constants.GLASS_SOUND_TAP)
+        if (!echoNotification.isRemoved) {
+            val audio = applicationContext?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audio.playSoundEffect(Constants.GLASS_SOUND_TAP)
+        }
 
         // If we wanted the screen to wake up upon receiving a notification, it should be done here
     }

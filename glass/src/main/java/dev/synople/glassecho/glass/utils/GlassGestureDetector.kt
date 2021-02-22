@@ -1,4 +1,4 @@
-package dev.synople.glassecho.glass
+package dev.synople.glassecho.glass.utils
 
 import android.content.Context
 import android.view.MotionEvent

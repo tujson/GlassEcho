@@ -12,14 +12,12 @@ import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.navigation.fragment.findNavController
 import dev.synople.glassecho.common.models.EchoNotification
-import dev.synople.glassecho.common.models.EchoNotificationAction
-import dev.synople.glassecho.glass.Constants
+import dev.synople.glassecho.glass.utils.Constants
 import dev.synople.glassecho.glass.EchoService
-import dev.synople.glassecho.glass.GlassGesture
-import dev.synople.glassecho.glass.GlassGestureDetector
+import dev.synople.glassecho.glass.utils.GlassGesture
+import dev.synople.glassecho.glass.utils.GlassGestureDetector
 import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.adapters.NotificationAdapter
 import dev.synople.glassecho.glass.databinding.FragmentNotificationTimelineBinding
@@ -33,21 +31,6 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
 
     private var _binding: FragmentNotificationTimelineBinding? = null
     private val binding get() = _binding!!
-
-    private val notificationReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-
-            intent?.getParcelableExtra<EchoNotification>(Constants.MESSAGE)?.let {
-                Log.v(TAG, "Received EchoNotification: ${it.id}")
-
-//                notificationsViewModel.handleNotification(it)
-
-                if (!it.isRemoved) {
-                    playSoundEffect(Constants.GLASS_SOUND_TAP)
-                }
-            }
-        }
-    }
 
     private val notificationsViewModel: NotificationsViewModel by activityViewModels()
     private var adapter: NotificationAdapter = NotificationAdapter()
@@ -73,10 +56,6 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         })
 
         EventBus.getDefault().register(this)
-        requireActivity().registerReceiver(
-            notificationReceiver,
-            IntentFilter(Constants.INTENT_FILTER_NOTIFICATION)
-        )
     }
 
     override fun onDestroyView() {
@@ -84,11 +63,6 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
 
         _binding = null
         EventBus.getDefault().unregister(this)
-        try {
-            requireActivity().unregisterReceiver(notificationReceiver)
-        } catch (e: IllegalArgumentException) {
-            Log.v(TAG, "notificationReceiver not registered", e)
-        }
     }
 
     @Subscribe
@@ -97,50 +71,31 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
             GlassGestureDetector.Gesture.TAP -> {
                 executeNotification()
             }
-            GlassGestureDetector.Gesture.SWIPE_UP -> {
-                dismissNotification()
-            }
             GlassGestureDetector.Gesture.SWIPE_FORWARD -> {
                 scrollNotifications(true)
             }
             GlassGestureDetector.Gesture.SWIPE_BACKWARD -> {
                 scrollNotifications(false)
             }
-            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_FORWARD -> {
-                scrollActions(true)
-            }
-            GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_BACKWARD -> {
-                scrollActions(false)
-            }
         }
     }
 
     private fun executeNotification() {
+        if (notificationsViewModel.notifications.value?.size == 0) {
+            playSoundEffect(Constants.GLASS_SOUND_DISALLOWED)
+            return
+        }
+
         playSoundEffect(Constants.GLASS_SOUND_TAP)
 
         val notification = notificationsViewModel.notifications.value?.get(rvPosition) ?: return
 
-        val actionRecyclerView = binding.rvNotifications.getChildAt(rvPosition)
-            .findViewById<RecyclerView>(R.id.rvActions)
-        var actionIndex =
-            (actionRecyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
-        val notificationAction = notification.actions[actionIndex]
+        val navAction =
+            NotificationTimelineFragmentDirections.actionNotificationTimelineFragmentToNotificationActionsFragment(
+                notification.actions.toTypedArray(), notification.id
+            )
 
-        val echoNotificationAction =
-            EchoNotificationAction(notification.id, notificationAction)
-
-        write(echoNotificationAction)
-    }
-
-    private fun dismissNotification() {
-        notificationsViewModel.remove(rvPosition)
-        playSoundEffect(Constants.GLASS_SOUND_DISMISS)
-
-        val notification = notificationsViewModel.notifications.value?.get(rvPosition) ?: return
-
-        val echoNotificationAction = EchoNotificationAction(notification.id, isDismiss = true)
-
-        write(echoNotificationAction)
+        findNavController().navigate(navAction)
     }
 
     private fun write(message: Parcelable) {
@@ -169,32 +124,8 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
         binding.rvNotifications.smoothScrollToPosition(rvPosition)
     }
 
-    private fun scrollActions(isScrollForward: Boolean) {
-        val actionRecyclerView = binding.rvNotifications.getChildAt(rvPosition)
-            .findViewById<RecyclerView>(R.id.rvActions)
-
-        var index =
-            (actionRecyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
-
-        if (isScrollForward) {
-            index--
-        } else {
-            index++
-        }
-
-        val notifActionsSize =
-            notificationsViewModel.notifications.value?.get(rvPosition)?.actions?.size ?: 0
-        if (index in 0 until notifActionsSize) {
-            actionRecyclerView.smoothScrollToPosition(index)
-        } else {
-            playSoundEffect(Constants.GLASS_SOUND_DISALLOWED)
-        }
-    }
-
     private fun playSoundEffect(soundEffect: Int) {
-        val audio =
-            context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audio.playSoundEffect(soundEffect)
+        (context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager)?.playSoundEffect(soundEffect)
     }
 
     companion object {

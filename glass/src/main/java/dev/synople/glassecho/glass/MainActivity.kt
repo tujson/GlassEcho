@@ -3,7 +3,8 @@ package dev.synople.glassecho.glass
 import android.os.Bundle
 import android.view.MotionEvent
 import androidx.fragment.app.FragmentActivity
-import dev.synople.glassecho.glass.fragments.ConnectFragment
+import dev.synople.glassecho.glass.utils.GlassGesture
+import dev.synople.glassecho.glass.utils.GlassGestureDetector
 import org.greenrobot.eventbus.EventBus
 
 
@@ -37,11 +38,6 @@ class MainActivity : FragmentActivity() {
                     return isHandled
                 }
             })
-
-        supportFragmentManager
-            .beginTransaction()
-            .replace(R.id.frameLayoutMain, ConnectFragment.newInstance())
-            .commit()
     }
 
     // For Glass XE

@@ -12,7 +12,6 @@ class NotificationAdapter :
     RecyclerView.Adapter<NotificationAdapter.ViewHolder>() {
 
     private val notifications: MutableList<EchoNotification> = mutableListOf()
-    private val viewPool = RecyclerView.RecycledViewPool()
 
     fun setNotifications(notifications: List<EchoNotification>) {
         this.notifications.clear()
@@ -36,7 +35,6 @@ class NotificationAdapter :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.liveCardBinding.apply {
             echoNotification = notifications[position]
-            rvActions.setRecycledViewPool(viewPool)
 
             executePendingBindings()
         }
