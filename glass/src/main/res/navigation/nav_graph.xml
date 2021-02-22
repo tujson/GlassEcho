@@ -45,5 +45,23 @@
         <argument
             android:name="notificationId"
             app:argType="string" />
+        <action
+            android:id="@+id/action_notificationActionsFragment_to_notificationReplyFragment"
+            app:destination="@id/notificationReplyFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/notificationReplyFragment"
+        android:name="dev.synople.glassecho.glass.fragments.NotificationReplyFragment"
+        android:label="fragment_notification_reply"
+        tools:layout="@layout/fragment_notification_reply" >
+        <action
+            android:id="@+id/action_notificationReplyFragment_to_notificationTimelineFragment"
+            app:destination="@id/notificationTimelineFragment" />
+        <argument
+            android:name="notificationId"
+            app:argType="string" />
+        <argument
+            android:name="action"
+            app:argType="string" />
     </fragment>
 </navigation>

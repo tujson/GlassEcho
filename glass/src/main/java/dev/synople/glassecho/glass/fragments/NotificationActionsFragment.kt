@@ -83,6 +83,16 @@ class NotificationActionsFragment : Fragment(R.layout.fragment_notification_acti
     }
 
     private fun executeAction() {
+        if (actions[rvPosition].toLowerCase() == Constants.REPLY_KEYWORD) {
+            findNavController().navigate(
+                NotificationActionsFragmentDirections.actionNotificationActionsFragmentToNotificationReplyFragment(
+                    notificationId,
+                    actions[rvPosition]
+                )
+            )
+            return
+        }
+
         val echoNotificationAction = if (rvPosition == actions.size - 1) {
             playSoundEffect(Constants.GLASS_SOUND_DISMISS)
             EchoNotificationAction(notificationId, isDismiss = true)

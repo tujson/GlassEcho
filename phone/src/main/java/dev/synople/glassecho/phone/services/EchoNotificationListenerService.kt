@@ -14,10 +14,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.RemoteInput
 import dev.synople.glassecho.common.APP_ICON_SIZE
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
@@ -35,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
 private val TAG = EchoNotificationListenerService::class.java.simpleName
-const val REPLY_KEYWORD = "reply"
 
 class EchoNotificationListenerService : NotificationListenerService() {
 
@@ -196,13 +197,6 @@ class EchoNotificationListenerService : NotificationListenerService() {
         val actions = mutableListOf<String>()
         sbn.notification.actions?.forEach {
             actions.add(it.title.toString())
-//            if (it.remoteInputs != null) {
-//                it.remoteInputs.forEach { remoteInput ->
-//                    if (remoteInput.resultKey.toLowerCase().contains(REPLY_KEYWORD)) {
-//                        // TODO: Should set a special flag for the action to be added.
-//                    }
-//                }
-//            }
         }
 
         return EchoNotification(
@@ -244,9 +238,34 @@ class EchoNotificationListenerService : NotificationListenerService() {
 
         sbn.notification.actions?.forEach {
             if (it.title == action.actionName) {
-                it.actionIntent.send()
+                if (!action.remoteInput.isNullOrEmpty()) {
+                    handleNotificationReply(it, action.remoteInput.toString())
+                } else {
+                    it.actionIntent.send()
+                }
             }
         }
+    }
+
+    private fun handleNotificationReply(action: Notification.Action, reply: String) {
+        val intent = Intent()
+        val bundle = Bundle()
+        val replyInputs = mutableListOf<RemoteInput>()
+
+        action.remoteInputs.forEach {
+            bundle.putCharSequence(it.resultKey, reply)
+
+            val builder = RemoteInput.Builder(it.resultKey).apply {
+                setLabel(it.resultKey)
+                setChoices(it.choices)
+                setAllowFreeFormInput(it.allowFreeFormInput)
+                addExtras(it.extras)
+            }.build()
+            replyInputs.add(builder)
+        }
+
+        RemoteInput.addResultsToIntent(replyInputs.toTypedArray(), intent, bundle)
+        action.actionIntent.send(applicationContext, 0, intent)
     }
 
     inner class ConnectedThread : Thread() {

@@ -42,5 +42,7 @@ object Constants {
     const val GLASS_SOUND_TAP = 13
     const val GLASS_SOUND_DISMISS = 15
     const val GLASS_SOUND_DISALLOWED = 10
+
+    const val REPLY_KEYWORD = "reply"
 }
 
