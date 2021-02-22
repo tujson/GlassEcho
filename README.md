@@ -1,4 +1,5 @@
 
+
 # GlassEcho  
 
 Show Android notifications on Google Glass via Bluetooth  
@@ -14,22 +15,34 @@ Show Android notifications on Google Glass via Bluetooth
 	- If it errors while reading the QR code, simply quit out of the Glass app and try scanning again.
 - Glass should now be connected! Try sending a notification. If you're not receiving notifications on Glass from other apps, make sure that app is enabled in the "Notification List" page on the phone app.
 
-The QR code pairing process only needs to happen once. For subsequent launches, make sure you click the "Connect" button in the phone app before launching the Glass app.
+The QR code pairing process only needs to happen once. For subsequent launches, make sure you click the "Connect" button in the phone app before launching the Glass app. 
 
 ## Development Priorities
+In no particular order:
 - Making the pairing process easier.
 	- Currently requires phone to be in connect mode first
+	- Sometimes Glass just refuses to connect? Bluetooth is fun, y'all.
 - Interacting with notifications on Glass.
-	- Dismissing notifications on Glass should dismiss them on phone
-	- Replying to notifications via a Bluetooth keyboard connected to Glass
+	- Replying to notifications.
+		- Currently flaky. Somewhat works via a bluetooth keyboard (tested with Tap Keyboard). Would like to get speech-to-text working.
 - Investigate robustness.
 	- Ensure Glass can auto-reconnect if the Bluetooth connection is severed. 
+	- Have connection status indicators on phone and Glass.
 - Wake screen on notification.
-    - And/or hook into Glass XE's notification glance
+    - And/or hook into Glass XE's notification glance/head nudge.
 - iOS support.
-	- Very rudimentary iOS support is already implemented. It's totally different code, so this will take quite some time.
+	- Very rudimentary iOS support is somewhat implemented in a different branch. It's totally different code, so this will take quite some time.
 - Wifi support.
 	- Looking into using Firebase Cloud Firestore to sync notifications. The hope is being able to walk around a Wifi saturated area without needing a phone! However, this does mean that the user needs to have some sort of technical proficiency to set up a Firebase project.
+- Camera pictures
+	- Being able to take a picture on Glass and have it show up on the phone.
+
+## What Works
+- Receiving notifications
+- Dismissing notifications
+- Performing notification actions (e.g. "Like", "Mark as Read", "Archive")
+- Replying to notifications
+	- Currently in progress.
 
 ## Known Limitations
 - No BLE connection. 
