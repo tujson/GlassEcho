@@ -17,6 +17,8 @@ Show Android notifications on Google Glass via Bluetooth
 
 The QR code pairing process only needs to happen once. For subsequent launches, make sure you click the "Connect" button in the phone app before launching the Glass app. 
 
+See the INSTALLING.md file for detailed instructions.
+
 ## Development Priorities
 In no particular order:
 - Making the pairing process easier.
