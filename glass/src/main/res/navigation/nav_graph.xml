@@ -14,8 +14,8 @@
         <action
             android:id="@+id/action_connectFragment_to_notificationTimelineFragment"
             app:destination="@id/notificationTimelineFragment"
-            app:popUpTo="@id/nav_graph"
-            app:popUpToInclusive="true" />
+            app:popUpTo="@id/connectFragment"
+            app:popUpToInclusive="true"/>
     </fragment>
 
     <fragment
