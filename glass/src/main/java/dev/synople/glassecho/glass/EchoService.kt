@@ -6,7 +6,9 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
+import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
@@ -66,7 +68,24 @@ class EchoService : Service() {
             audio.playSoundEffect(Constants.GLASS_SOUND_TAP)
         }
 
-        // If we wanted the screen to wake up upon receiving a notification, it should be done here
+        if (echoNotification.isWakeScreen) {
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+
+            @Suppress("DEPRECATION")
+            if ((Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT && !powerManager.isInteractive)
+                || (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT && !powerManager.isScreenOn)
+            ) {
+                val wakelock = powerManager.newWakeLock(
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                    "glassecho:wakelocktag"
+                )
+                wakelock.acquire(3000L)
+                val mainActivityIntent = Intent(applicationContext, MainActivity::class.java)
+                mainActivityIntent.flags =
+                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(mainActivityIntent)
+            }
+        }
     }
 
     inner class ConnectedThread(private val bluetoothDevice: BluetoothDevice) : Thread() {

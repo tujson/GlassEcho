@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -17,12 +16,12 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.zxing.integration.android.IntentIntegrator
-import dev.synople.glassecho.glass.utils.Constants
 import dev.synople.glassecho.glass.EchoService
-import dev.synople.glassecho.glass.utils.GlassGesture
-import dev.synople.glassecho.glass.utils.GlassGestureDetector
 import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.databinding.FragmentConnectBinding
+import dev.synople.glassecho.glass.utils.Constants
+import dev.synople.glassecho.glass.utils.GlassGesture
+import dev.synople.glassecho.glass.utils.GlassGestureDetector
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 
@@ -56,9 +55,10 @@ class ConnectFragment : Fragment(R.layout.fragment_connect) {
             intent?.extras?.getBoolean(Constants.EXTRA_DEVICE_IS_CONNECTED)
                 ?.let { isConnected ->
                     if (isConnected) {
-                        val audio =
-                            context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                        audio.playSoundEffect(Constants.GLASS_SOUND_SUCCESS)
+                        // Disabling for now since this sound is played even when the screen is woken up
+//                        val audio =
+//                            context?.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+//                        audio.playSoundEffect(Constants.GLASS_SOUND_SUCCESS)
 
                         requireActivity().apply {
                             getSharedPreferences(

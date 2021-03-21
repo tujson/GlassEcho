@@ -79,8 +79,4 @@ class MainActivity : AppCompatActivity() {
         }
         return alertDialogBuilder.create()
     }
-
-    companion object {
-        const val SHARED_PREFS = "dev.synople.glassecho.sharedprefs"
-    }
 }

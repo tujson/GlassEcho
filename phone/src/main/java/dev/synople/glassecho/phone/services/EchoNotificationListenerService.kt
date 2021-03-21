@@ -7,9 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothSocket
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
@@ -20,15 +18,18 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
+import com.squareup.sqldelight.android.AndroidSqliteDriver
 import dev.synople.glassecho.common.APP_ICON_SIZE
 import dev.synople.glassecho.common.glassEchoUUID
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.common.models.EchoNotificationAction
 import dev.synople.glassecho.phone.Constants
+import dev.synople.glassecho.phone.Database
 import dev.synople.glassecho.phone.GlassEchoBroadcastReceiver
 import dev.synople.glassecho.phone.MainActivity
-import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
 import dev.synople.glassecho.phone.R
+import dev.synople.glassecho.phone.models.EchoApp
+import dev.synople.glassecho.phone.models.EchoAppQueries
 import java.io.IOException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
@@ -41,7 +42,7 @@ private val TAG = EchoNotificationListenerService::class.java.simpleName
 class EchoNotificationListenerService : NotificationListenerService() {
 
     private var glassConnection: ConnectedThread? = null
-    private var sharedPref: SharedPreferences? = null
+    private var echoAppQueries: EchoAppQueries? = null
     private val notifications: MutableMap<String, StatusBarNotification> = mutableMapOf()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -52,7 +53,10 @@ class EchoNotificationListenerService : NotificationListenerService() {
             return Service.START_NOT_STICKY
         }
 
-        sharedPref = applicationContext.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE)
+        val driver =
+            AndroidSqliteDriver(Database.Schema, applicationContext, Constants.DATABASE_ECHO_APP)
+        val echoAppsDatabase = Database(driver)
+        echoAppQueries = echoAppsDatabase.echoAppQueries
 
         showNotification()
 
@@ -151,8 +155,18 @@ class EchoNotificationListenerService : NotificationListenerService() {
             return false
         }
 
-        if (sharedPref?.getBoolean(sbn.packageName, false) == false) {
-            return false
+        echoAppQueries?.getEchoApp(sbn.packageName)?.executeAsOneOrNull()?.let {
+            if (!it.isNotify) return@isWantedNotification false
+        } ?: run {
+            echoAppQueries?.insert(
+                EchoApp(
+                    sbn.packageName,
+                    Constants.IS_NOTIFY_DEFAULT,
+                    Constants.IS_WAKE_SCREEN_DEFAULT
+                )
+            )
+
+            if (!Constants.IS_NOTIFY_DEFAULT) return false
         }
 
         // Because Facebook Messenger is weird.
@@ -199,6 +213,10 @@ class EchoNotificationListenerService : NotificationListenerService() {
             actions.add(it.title.toString())
         }
 
+        val isWakeScreen =
+            echoAppQueries?.getEchoApp(sbn.packageName)?.executeAsOneOrNull()?.isWakeScreen
+                ?: Constants.IS_WAKE_SCREEN_DEFAULT
+
         return EchoNotification(
             id,
             appIcon,
@@ -207,6 +225,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
             title,
             text,
             actions,
+            isWakeScreen = isWakeScreen,
             isRemoved = isRemoved,
         )
     }
@@ -274,10 +293,10 @@ class EchoNotificationListenerService : NotificationListenerService() {
         private var bluetoothSocket: BluetoothSocket? = null
 
         override fun run() {
-            val buffer = ByteArray(1024)
-
             bluetoothSocket = establishConnection()
             Log.v(TAG, "bluetoothSocket isConnected: ${bluetoothSocket?.isConnected}")
+
+            // TODO: On connect, should send over existing notifications retrieved from getActiveNotifications()
 
             while (bluetoothSocket?.isConnected == true && isRunning.get()) {
                 try {

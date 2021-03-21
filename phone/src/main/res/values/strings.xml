@@ -9,4 +9,8 @@
     <string name="notification_title">GlassEcho</string>
     <string name="notification_connecting">Connecting...</string>
     <string name="notification_message">Echoing notifications</string>
+
+    <string name="app_icon">App icon</string>
+    <string name="expand_options">Expand options</string>
+    <string name="wake_screen">Wake screen</string>
 </resources>

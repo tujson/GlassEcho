@@ -11,6 +11,10 @@
         android:layout_height="match_parent"
         android:gravity="top"
         android:inputType="text"
-        tools:text="This is my response." />
+        android:textSize="36sp"
+        tools:text="This is my response.">
+
+        <requestFocus />
+    </EditText>
 
 </FrameLayout>

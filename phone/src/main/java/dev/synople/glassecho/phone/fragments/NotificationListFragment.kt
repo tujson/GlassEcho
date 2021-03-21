@@ -1,88 +1,68 @@
 package dev.synople.glassecho.phone.fragments
 
-import android.content.Context
-import android.content.Intent
-import android.content.SharedPreferences
-import android.content.pm.ResolveInfo
 import android.os.Bundle
+import android.util.Log
 import android.view.View
-import android.widget.CompoundButton
 import androidx.fragment.app.Fragment
-import dev.synople.glassecho.phone.MainActivity.Companion.SHARED_PREFS
+import androidx.recyclerview.widget.DividerItemDecoration
+import com.squareup.sqldelight.android.AndroidSqliteDriver
+import dev.synople.glassecho.phone.Constants
+import dev.synople.glassecho.phone.Database
 import dev.synople.glassecho.phone.R
-import dev.synople.glassecho.phone.adapters.NotificationAdapter
+import dev.synople.glassecho.phone.adapters.AppAdapter
 import dev.synople.glassecho.phone.databinding.FragmentNotificationListBinding
-import java.util.Collections
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
+
+
+private val TAG = NotificationListFragment::class.java.simpleName
 
 /**
  * Lets users pick which apps show notifications on Glass
  */
-class NotificationListFragment : Fragment(R.layout.fragment_notification_list),
-    CompoundButton.OnCheckedChangeListener {
+class NotificationListFragment : Fragment(R.layout.fragment_notification_list), CoroutineScope {
 
-    private lateinit var installedApps: List<ResolveInfo>
-    private lateinit var adapter: NotificationAdapter
-
-    private lateinit var sharedPref: SharedPreferences
+    private lateinit var adapter: AppAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        installedApps = getInstalledApps()
-        sharedPref = activity?.getSharedPreferences(
-            SHARED_PREFS,
-            Context.MODE_PRIVATE
-        )!!
+        val driver =
+            AndroidSqliteDriver(Database.Schema, requireContext(), Constants.DATABASE_ECHO_APP)
+        val echoAppsDatabase = Database(driver)
+        val echoAppQueries = echoAppsDatabase.echoAppQueries
+
+        val allApps = echoAppQueries.selectAll().executeAsList().toMutableList()
+
+        Log.v(TAG, "f$allApps")
 
         FragmentNotificationListBinding.bind(view).apply {
-            adapter = NotificationAdapter(
-                installedApps,
-                requireContext().packageManager,
-                sharedPref
-            ) { packageName, isChecked ->
-                switchAllOn.setOnCheckedChangeListener(null)
-                if (switchAllOn.isChecked && !isChecked) {
-                    switchAllOn.isChecked = false
-                } else if (!switchAllOn.isChecked && isChecked && areAllAppsChecked(installedApps)) {
-                    switchAllOn.isChecked = true
+            adapter = AppAdapter(
+                allApps
+            ) { app, position ->
+                launch {
+                    echoAppQueries.insert(app)
                 }
-                switchAllOn.setOnCheckedChangeListener(this@NotificationListFragment)
+
+                rvApps.post {
+                    allApps[position] = app
+                    adapter.notifyItemChanged(position)
+                }
             }
+
             rvApps.adapter = adapter
 
-            switchAllOn.isChecked = areAllAppsChecked(installedApps)
-
-            switchAllOn.setOnCheckedChangeListener(this@NotificationListFragment)
+            rvApps.addItemDecoration(
+                DividerItemDecoration(
+                    rvApps.context,
+                    DividerItemDecoration.VERTICAL
+                )
+            )
         }
     }
 
-    private fun getInstalledApps(): List<ResolveInfo> {
-        val pm = requireContext().packageManager
-        val main = Intent(Intent.ACTION_MAIN, null)
-        main.addCategory(Intent.CATEGORY_LAUNCHER)
-        val launchables = pm.queryIntentActivities(main, 0)
-        Collections.sort(launchables, ResolveInfo.DisplayNameComparator(pm))
-        return launchables
-    }
-
-    private fun areAllAppsChecked(installedApps: List<ResolveInfo>): Boolean {
-        installedApps.forEach {
-            if (!sharedPref.getBoolean(it.activityInfo.packageName, false)) {
-                return false
-            }
-        }
-
-        return true
-    }
-
-    override fun onCheckedChanged(buttonView: CompoundButton?, isChecked: Boolean) {
-        sharedPref.edit().apply {
-            installedApps.forEach {
-                this.putBoolean(it.activityInfo.packageName, isChecked)
-            }
-            apply()
-        }
-
-        adapter.notifyDataSetChanged()
-    }
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.IO
 }

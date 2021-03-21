@@ -16,6 +16,7 @@ data class EchoNotification(
     val title: String,
     val text: String,
     val actions: List<String>,
+    val isWakeScreen: Boolean = false,
     val isRemoved: Boolean = false,
 ) : Parcelable, Serializable {
 
@@ -27,6 +28,7 @@ data class EchoNotification(
         title: String,
         text: String,
         actions: List<String>,
+        isWakeScreen: Boolean = false,
         isRemoved: Boolean = false,
     ) : this(
         id,
@@ -36,6 +38,7 @@ data class EchoNotification(
         title,
         text,
         actions,
+        isWakeScreen,
         isRemoved,
     )
 
@@ -62,7 +65,7 @@ data class EchoNotification(
 
     override fun toString() =
         """
-            ID: $id
+            Id: $id
             AppIcon size: ${appIcon.size}
             AppName: $appName
             LargeIcon size: ${largeIcon.size}

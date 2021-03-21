@@ -12,4 +12,9 @@ object Constants {
 
     const val FROM_NOTIFICATION = "fromNotification"
     const val NOTIFICATION_ACTION_STOP = "notificationActionStop"
+
+    const val DATABASE_ECHO_APP = "echoApp.db"
+
+    const val IS_NOTIFY_DEFAULT = true // TODO: Make user configurable
+    const val IS_WAKE_SCREEN_DEFAULT = false // TODO: Make user configurable
 }
