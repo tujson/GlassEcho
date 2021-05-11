@@ -22,6 +22,7 @@ class AppAdapter(
             position: Int,
             onAppChange: (EchoApp, Int) -> Unit,
         ) {
+            // TODO: See if we can go without the QUERY_ALL_PACKAGES permission or if we need to revert to old behavior (showing full list of installed apps)
             val packageManager = rowAppBinding.root.context.packageManager
             val appIcon = packageManager.getApplicationIcon(echoApp.packageName)
             val appName = packageManager.getApplicationLabel(
