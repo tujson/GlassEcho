@@ -13,4 +13,5 @@
     <string name="app_icon">App icon</string>
     <string name="expand_options">Expand options</string>
     <string name="wake_screen">Wake screen</string>
+    <string name="wake_glass">Wake Glass?</string>
 </resources>

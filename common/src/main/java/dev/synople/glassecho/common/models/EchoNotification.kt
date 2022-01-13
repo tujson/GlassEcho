@@ -16,7 +16,7 @@ data class EchoNotification(
     val title: String,
     val text: String,
     val actions: List<String>,
-    val isWakeScreen: Boolean = false,
+    val isWakeScreen: Boolean = true,
     val isRemoved: Boolean = false,
 ) : Parcelable, Serializable {
 

@@ -16,5 +16,5 @@ object Constants {
     const val DATABASE_ECHO_APP = "echoApp.db"
 
     const val IS_NOTIFY_DEFAULT = true // TODO: Make user configurable
-    const val IS_WAKE_SCREEN_DEFAULT = false // TODO: Make user configurable
+    var IS_WAKE_SCREEN_DEFAULT = true // TODO: Make user configurable
 }
