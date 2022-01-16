@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import dev.synople.glassecho.common.glassEchoUUID
+import dev.synople.glassecho.common.models.EchoHTTPRequest
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.common.models.EchoNotificationAction
 import dev.synople.glassecho.glass.utils.Constants
@@ -103,6 +104,9 @@ class EchoService : Service() {
 
                     if (echoMessage is EchoNotification) {
                         handleNotification(echoMessage)
+
+                    } else if (echoMessage is EchoHTTPRequest) {
+                        handleResponse(echoMessage)
                     } else {
                         Log.v(
                             TAG,
@@ -117,6 +121,9 @@ class EchoService : Service() {
             }
 
             cancel()
+        }
+        private fun handleResponse(response: EchoHTTPRequest) {
+
         }
 
         fun write(message: Serializable) {

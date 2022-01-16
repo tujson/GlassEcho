@@ -1,5 +1,6 @@
 package dev.synople.glassecho.phone.services
 
+import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -21,6 +22,7 @@ import androidx.core.app.RemoteInput
 import com.squareup.sqldelight.android.AndroidSqliteDriver
 import dev.synople.glassecho.common.APP_ICON_SIZE
 import dev.synople.glassecho.common.glassEchoUUID
+import dev.synople.glassecho.common.models.EchoHTTPRequest
 import dev.synople.glassecho.common.models.EchoNotification
 import dev.synople.glassecho.common.models.EchoNotificationAction
 import dev.synople.glassecho.phone.Constants
@@ -30,10 +32,16 @@ import dev.synople.glassecho.phone.MainActivity
 import dev.synople.glassecho.phone.R
 import dev.synople.glassecho.phone.models.EchoApp
 import dev.synople.glassecho.phone.models.EchoAppQueries
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.io.OutputStream
 import java.io.Serializable
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
@@ -305,6 +313,13 @@ class EchoNotificationListenerService : NotificationListenerService() {
 
                     if (message is EchoNotificationAction) {
                         handleNotificationAction(message)
+                    } else if (message is EchoHTTPRequest) {
+                        when(message.intent.getStringExtra("REQUEST_METHOD")) {
+                            "POST" -> httpPost(message.intent)
+                            else -> {
+                                httpGet(message.intent)
+                            }
+                        }
                     } else {
                         Log.v(TAG, "Received unknown message: $message")
                     }
@@ -319,6 +334,43 @@ class EchoNotificationListenerService : NotificationListenerService() {
             }
 
             cancel()
+        }
+
+        private fun httpGet(intent: Intent) {
+            if (!intent.extras!!.containsKey("REQUEST_URL")) {
+                Log.e("GlassEcho HTTP", "Request URL for GET not set.")
+                return
+            }
+
+            val url = URL(intent.getStringExtra("REQUEST_URL"))
+            val urlConnection: HttpURLConnection = url.openConnection() as HttpURLConnection
+            try {
+                var input = BufferedInputStream(urlConnection.inputStream)
+                intent.putExtra("RESPONSE_BYTES", input.readBytes())
+            } finally {
+                urlConnection.disconnect()
+                write(EchoHTTPRequest(intent))
+            }
+        }
+
+        private fun httpPost(intent: Intent) {
+            if (!intent.extras!!.containsKey("REQUEST_URL")) {
+                Log.e("GlassEcho HTTP", "Request URL for POST not set.")
+                return
+            }
+            val url = URL(intent.getStringExtra("REQUEST_URL"))
+            val urlConnection = url.openConnection() as HttpURLConnection
+            try {
+                urlConnection.doOutput = true
+                urlConnection.setChunkedStreamingMode(0)
+                val out: OutputStream = BufferedOutputStream(urlConnection.outputStream)
+                out.write(intent.getByteArrayExtra("REQUEST_BYTES"))
+                val input: InputStream = BufferedInputStream(urlConnection.inputStream)
+                intent.putExtra("RESPONSE_BYTES", input.readBytes())
+            } finally {
+                urlConnection.disconnect()
+                write(EchoHTTPRequest(intent))
+            }
         }
 
         private fun establishConnection(): BluetoothSocket? {

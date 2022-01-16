@@ -3,6 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="glass/src/main/res/layout/fragment_notification_actions.xml" value="0.2078125" />
+        <entry key="glass/src/main/res/layout/item_notification_action.xml" value="0.2078125" />
+        <entry key="glass/src/main/res/menu/connect_fragment.xml" value="0.2078125" />
         <entry key="phone/src/main/res/drawable/ic_settings.xml" value="0.3776041666666667" />
         <entry key="phone/src/main/res/layout/activity_main.xml" value="0.3614583333333333" />
         <entry key="phone/src/main/res/layout/fragment_settings.xml" value="0.3614583333333333" />
