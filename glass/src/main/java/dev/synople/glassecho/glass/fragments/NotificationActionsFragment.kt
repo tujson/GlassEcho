@@ -5,12 +5,14 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Parcelable
+import android.util.Log
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dev.synople.glassecho.common.models.EchoNotificationAction
 import dev.synople.glassecho.glass.EchoService
+import dev.synople.glassecho.glass.NotificationRepository
 import dev.synople.glassecho.glass.R
 import dev.synople.glassecho.glass.adapters.NotificationActionAdapter
 import dev.synople.glassecho.glass.databinding.FragmentNotificationActionsBinding
@@ -19,6 +21,7 @@ import dev.synople.glassecho.glass.utils.GlassGesture
 import dev.synople.glassecho.glass.utils.GlassGestureDetector
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
+import java.lang.Exception
 import java.util.Locale
 import androidx.activity.OnBackPressedCallback as OnBackPressedCallback1
 
@@ -97,12 +100,21 @@ class NotificationActionsFragment : Fragment(R.layout.fragment_notification_acti
         val echoNotificationAction = if (rvPosition == actions.size - 1) {
             playSoundEffect(Constants.GLASS_SOUND_DISMISS)
             EchoNotificationAction(notificationId, isDismiss = true)
+
+
         } else {
             playSoundEffect(Constants.GLASS_SOUND_SUCCESS)
             EchoNotificationAction(notificationId, actions[rvPosition])
         }
 
         write(echoNotificationAction)
+        if (echoNotificationAction.isDismiss) {
+            try {
+                NotificationRepository.getInstance().remove(notificationId.toInt())
+            } catch (e: Exception) {
+                Log.e("NOTIFICATION_DELETE", e.stackTraceToString())
+            }
+        }
         findNavController().popBackStack()
     }
 
