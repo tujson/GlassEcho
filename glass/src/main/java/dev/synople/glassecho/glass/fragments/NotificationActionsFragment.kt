@@ -19,6 +19,7 @@ import dev.synople.glassecho.glass.utils.GlassGesture
 import dev.synople.glassecho.glass.utils.GlassGestureDetector
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
+import java.util.Locale
 import androidx.activity.OnBackPressedCallback as OnBackPressedCallback1
 
 class NotificationActionsFragment : Fragment(R.layout.fragment_notification_actions) {
@@ -83,7 +84,7 @@ class NotificationActionsFragment : Fragment(R.layout.fragment_notification_acti
     }
 
     private fun executeAction() {
-        if (actions[rvPosition].toLowerCase() == Constants.REPLY_KEYWORD) {
+        if (actions[rvPosition].lowercase(Locale.getDefault()) == Constants.REPLY_KEYWORD) {
             findNavController().navigate(
                 NotificationActionsFragmentDirections.actionNotificationActionsFragmentToNotificationReplyFragment(
                     notificationId,
