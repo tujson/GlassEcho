@@ -77,6 +77,7 @@ class NotificationTimelineFragment : Fragment(R.layout.fragment_notification_tim
             GlassGestureDetector.Gesture.SWIPE_BACKWARD -> {
                 scrollNotifications(false)
             }
+            else -> {}
         }
     }
 

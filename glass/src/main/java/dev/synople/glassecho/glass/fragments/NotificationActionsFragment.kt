@@ -73,12 +73,16 @@ class NotificationActionsFragment : Fragment(R.layout.fragment_notification_acti
             GlassGestureDetector.Gesture.TAP -> {
                 executeAction()
             }
+
             GlassGestureDetector.Gesture.SWIPE_FORWARD -> {
                 scrollActions(true)
             }
+
             GlassGestureDetector.Gesture.SWIPE_BACKWARD -> {
                 scrollActions(false)
             }
+
+            else -> {}
         }
     }
 
