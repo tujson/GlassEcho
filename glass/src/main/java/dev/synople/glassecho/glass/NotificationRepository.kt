@@ -16,7 +16,7 @@ class NotificationRepository {
             notifications.value?.removeAt(index)
         } else {
             if (index == -1) {
-                notifications.value?.add(echoNotification)
+                notifications.value?.add(0, echoNotification)
             } else {
                 notifications.value?.set(index, echoNotification)
             }
