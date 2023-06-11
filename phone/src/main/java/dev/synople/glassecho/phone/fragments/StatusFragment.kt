@@ -68,7 +68,7 @@ class StatusFragment : Fragment(R.layout.fragment_status) {
                 action = TEST_NOTIFICATION_ACTION_REPLY
                 putExtra(TEST_NOTIFICATION_ACTION_REPLY, "REPLY")
             },
-            0
+            PendingIntent.FLAG_MUTABLE
         )
         val replyAction = NotificationCompat.Action.Builder(null, "Reply", replyPendingIntent)
             .addRemoteInput(remoteInput).build()
@@ -80,7 +80,7 @@ class StatusFragment : Fragment(R.layout.fragment_status) {
                 action = TEST_NOTIFICATION_ACTION
                 putExtra(TEST_NOTIFICATION_ACTION, "One")
             },
-            0
+            PendingIntent.FLAG_MUTABLE
         )
         val secondAction = PendingIntent.getBroadcast(
             requireContext().applicationContext,
@@ -89,7 +89,7 @@ class StatusFragment : Fragment(R.layout.fragment_status) {
                 action = TEST_NOTIFICATION_ACTION
                 putExtra(TEST_NOTIFICATION_ACTION, "Two")
             },
-            0
+            PendingIntent.FLAG_MUTABLE
         )
 
         val builder =

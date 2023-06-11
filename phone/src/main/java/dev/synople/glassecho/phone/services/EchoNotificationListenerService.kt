@@ -83,7 +83,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
 
         val pendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { notificationIntent ->
-                PendingIntent.getActivity(this, 0, notificationIntent, 0)
+                PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_MUTABLE)
             }
 
         val stopPendingIntent: PendingIntent =
@@ -96,7 +96,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
                     this,
                     16510,
                     notificationIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             }
         val stopAction =
