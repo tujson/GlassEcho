@@ -334,7 +334,7 @@ class GlassGestureDetector(context: Context?, onGestureListener: OnGestureListen
      * @param onGestureListener is a listener for the gestures.
      */
     init {
-        val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+        val touchSlop = ViewConfiguration.get(context!!).scaledTouchSlop
         touchSlopSquare = touchSlop * touchSlop
         this.onGestureListener = onGestureListener
     }

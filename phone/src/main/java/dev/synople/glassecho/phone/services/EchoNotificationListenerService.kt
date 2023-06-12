@@ -203,7 +203,7 @@ class EchoNotificationListenerService : NotificationListenerService() {
         val title = sbn.notification.extras.get(Notification.EXTRA_TITLE).toString()
         val text = sbn.notification.extras.get(Notification.EXTRA_TEXT).toString()
         val largeIcon = sbn.notification.getLargeIcon()?.let {
-            getBitmapFromDrawable(it.loadDrawable(this))
+            getBitmapFromDrawable(it.loadDrawable(this)!!)
         } ?: run {
             Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
