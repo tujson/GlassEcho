@@ -1,15 +1,18 @@
 package dev.synople.glassecho.phone.fragments
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
@@ -36,19 +39,41 @@ class StatusFragment : Fragment(R.layout.fragment_status) {
 
         FragmentStatusBinding.bind(view).apply {
             btnConnect.setOnClickListener {
-                val discoverableIntent: Intent =
-                    Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
-                        putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+                if (ContextCompat.checkSelfPermission(
+                        requireContext(), Manifest.permission.BLUETOOTH_CONNECT
+                    ) == PackageManager.PERMISSION_DENIED
+                ) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        ActivityCompat.requestPermissions(
+                            requireActivity(), arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 2
+                        )
                     }
-                startActivity(discoverableIntent)
+                } else {
+                    val discoverableIntent: Intent =
+                        Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE).apply {
+                            putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+                        }
+                    startActivity(discoverableIntent)
 
-                startEchoService()
+                    startEchoService()
 
-                setQrCode(ivQrCode)
+                    setQrCode(ivQrCode)
+                }
             }
 
             btnTestNotif.setOnClickListener {
-                showTestNotification()
+                if (ContextCompat.checkSelfPermission(
+                        requireContext(), Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_DENIED
+                ) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        ActivityCompat.requestPermissions(
+                            requireActivity(), arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2
+                        )
+                    }
+                } else {
+                    showTestNotification()
+                }
             }
         }
     }
@@ -92,19 +117,14 @@ class StatusFragment : Fragment(R.layout.fragment_status) {
             PendingIntent.FLAG_MUTABLE
         )
 
-        val builder =
-            NotificationCompat.Builder(
-                requireContext().applicationContext,
-                TEST_NOTIFICATION_CHANNEL_ID
-            )
-                .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_notif_icon))
-                .setSmallIcon(R.drawable.ic_notif_icon)
-                .setContentTitle("Test Notification")
-                .setContentText("GlassEcho Content: ${System.currentTimeMillis() / 1000}")
-                .addAction(replyAction)
-                .addAction(R.drawable.ic_stop, "One", firstAction)
-                .addAction(R.drawable.ic_stop, "Two", secondAction)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        val builder = NotificationCompat.Builder(
+            requireContext().applicationContext, TEST_NOTIFICATION_CHANNEL_ID
+        ).setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_notif_icon))
+            .setSmallIcon(R.drawable.ic_notif_icon).setContentTitle("Test Notification")
+            .setContentText("GlassEcho Content: ${System.currentTimeMillis() / 1000}")
+            .addAction(replyAction).addAction(R.drawable.ic_stop, "One", firstAction)
+            .addAction(R.drawable.ic_stop, "Two", secondAction)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
         with(NotificationManagerCompat.from(requireContext())) {
             notify(TEST_NOTIFICATION_ID, builder.build())
@@ -136,8 +156,7 @@ class StatusFragment : Fragment(R.layout.fragment_status) {
     }
 
     private fun startEchoService() {
-        val serviceIntent =
-            Intent(requireContext(), EchoNotificationListenerService::class.java)
+        val serviceIntent = Intent(requireContext(), EchoNotificationListenerService::class.java)
         ContextCompat.startForegroundService(requireContext(), serviceIntent)
     }
 }
