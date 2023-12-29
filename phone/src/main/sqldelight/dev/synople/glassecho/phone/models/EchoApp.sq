@@ -1,0 +1,18 @@
+CREATE TABLE echoApp (
+  packageName TEXT NOT NULL UNIQUE,
+  isNotify INTEGER AS Boolean NOT NULL,
+  isWakeScreen INTEGER AS Boolean NOT NULL
+);
+
+selectAll:
+SELECT *
+FROM echoApp;
+
+insert:
+INSERT OR REPLACE INTO echoApp(packageName, isNotify, isWakeScreen)
+VALUES ?;
+
+getEchoApp:
+SELECT *
+FROM echoApp
+WHERE packageName = ?;

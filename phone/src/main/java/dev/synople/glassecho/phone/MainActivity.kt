@@ -1,7 +1,6 @@
 package dev.synople.glassecho.phone
 
 import android.content.ComponentName
-import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -9,15 +8,34 @@ import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import android.text.TextUtils
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.findNavController
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 
 class MainActivity : AppCompatActivity() {
-
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        if (!isNotificationServiceEnabled()) {
+            buildNotificationServiceAlertDialog()?.show()
+        }
+
+        val navController = findNavController(R.id.nav_host_fragment)
+        findViewById<BottomNavigationView>(R.id.bottom_nav).setupWithNavController(navController)
+        val appBarConfiguration = AppBarConfiguration(
+            topLevelDestinationIds = setOf(
+                R.id.statusFragment,
+                R.id.notificationListFragment,
+                R.id.settingsFragment,
+            )
+        )
+        setupActionBarWithNavController(navController, appBarConfiguration)
 
         if (!isNotificationServiceEnabled()) {
             buildNotificationServiceAlertDialog()?.show()
@@ -45,22 +63,20 @@ class MainActivity : AppCompatActivity() {
     private fun buildNotificationServiceAlertDialog(): AlertDialog? {
         val alertDialogBuilder: AlertDialog.Builder = AlertDialog.Builder(this)
         alertDialogBuilder.setTitle("GlassEcho")
-        alertDialogBuilder.setMessage("Needs permission.")
-        alertDialogBuilder.setPositiveButton("Yes",
-            DialogInterface.OnClickListener { _, _ ->
-                startActivity(
-                    Intent(
-                        ACTION_NOTIFICATION_LISTENER_SETTINGS
-                    )
+        alertDialogBuilder.setMessage("Needs permission to read notifications.")
+        alertDialogBuilder.setPositiveButton(
+            "Yes"
+        ) { _, _ ->
+            startActivity(
+                Intent(
+                    ACTION_NOTIFICATION_LISTENER_SETTINGS
                 )
-            })
-        alertDialogBuilder.setNegativeButton("No",
-            DialogInterface.OnClickListener { _, _ ->
-            })
+            )
+        }
+        alertDialogBuilder.setNegativeButton(
+            "No"
+        ) { _, _ ->
+        }
         return alertDialogBuilder.create()
-    }
-
-    companion object {
-        const val SHARED_PREFS = "dev.synople.glassecho.sharedprefs"
     }
 }

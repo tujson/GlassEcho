@@ -1,7 +1,16 @@
 <resources>
-    <string name="app_name">GlassEcho - Phone</string>
+    <string name="app_name">GlassEcho</string>
     <string name="service_name">GlassEcho Notification Listener</string>
 
+    <string name="status">Status</string>
+    <string name="notification_list">Notification List</string>
+    <string name="settings">Settings</string>
+
     <string name="notification_title">GlassEcho</string>
+    <string name="notification_connecting">Connecting...</string>
     <string name="notification_message">Echoing notifications</string>
+
+    <string name="app_icon">App icon</string>
+    <string name="expand_options">Expand options</string>
+    <string name="wake_screen">Wake screen</string>
 </resources>

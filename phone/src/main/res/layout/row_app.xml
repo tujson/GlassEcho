@@ -1,0 +1,75 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="12dp"
+    android:layout_marginEnd="12dp"
+    android:animateLayoutChanges="true"
+    android:orientation="vertical">
+
+    <ImageView
+        android:id="@+id/ivAppIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:contentDescription="@string/app_icon"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@drawable/ic_launcher_foreground" />
+
+    <TextView
+        android:id="@+id/tvAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:textColor="@android:color/black"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="@id/ivAppIcon"
+        app:layout_constraintStart_toEndOf="@id/ivAppIcon"
+        app:layout_constraintTop_toTopOf="@id/ivAppIcon"
+        tools:text="My App Name" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchApp"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginStart="12dp"
+        android:elevation="4dp"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="@id/ivAppIcon"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivAppIcon" />
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivAppIcon" />
+
+    <ImageView
+        android:id="@+id/ivExpandOptions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/expand_options"
+        android:paddingBottom="8dp"
+        android:src="@drawable/ic_arrow_down"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchWakeScreen"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="16dp"
+        android:paddingBottom="40dp"
+        android:text="@string/wake_screen"
+        android:textColor="@android:color/darker_gray"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/switchApp" />
+</androidx.constraintlayout.widget.ConstraintLayout>

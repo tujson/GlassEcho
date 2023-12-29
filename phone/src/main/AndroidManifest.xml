@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="dev.synople.glassecho.phone">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.hardware.bluetooth" />
+    <uses-feature android:name="android.software.companion_device_setup" />
+
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--    https://support.google.com/googleplay/android-developer/answer/10158779-->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 
     <application
         android:allowBackup="true"
@@ -12,8 +22,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-        <activity android:name="dev.synople.glassecho.phone.MainActivity">
+        android:theme="@style/Theme.MaterialComponents.DayNight.DarkActionBar">
+        <activity
+            android:name="dev.synople.glassecho.phone.MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -21,14 +33,23 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".services.GlassEchoNotificationListenerService"
+        <receiver android:name=".GlassEchoBroadcastReceiver" />
+
+        <service
+            android:name=".services.EchoNotificationListenerService"
+            android:enabled="true"
+            android:exported="false"
             android:label="@string/service_name"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:enabled="true">
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:enabled="true" />
+
     </application>
 
 </manifest>

@@ -1,78 +1,58 @@
 package dev.synople.glassecho.glass
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentStatePagerAdapter
-import androidx.viewpager.widget.ViewPager
-import com.google.android.material.tabs.TabLayout
-import dev.synople.glassecho.glass.fragments.BaseFragment
-import dev.synople.glassecho.glass.fragments.MainLayoutFragment
-import dev.synople.glassecho.glassgesturedetector.GlassGestureDetector
-import java.util.*
+import android.view.MotionEvent
+import androidx.fragment.app.FragmentActivity
+import dev.synople.glassecho.glass.utils.GlassGesture
+import dev.synople.glassecho.glass.utils.GlassGestureDetector
+import org.greenrobot.eventbus.EventBus
 
-/**
- * Main activity of the application. It provides viewPager to move between fragments.
- */
-class MainActivity : BaseActivity() {
-    private val fragments: MutableList<BaseFragment> =
-        ArrayList<BaseFragment>()
-    private var viewPager: ViewPager? = null
+
+private val TAG = MainActivity::class.java.simpleName
+
+class MainActivity : FragmentActivity() {
+
+    private lateinit var gestureDetector: GlassGestureDetector
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.view_pager_layout)
+        setContentView(R.layout.activity_main)
 
-        val screenSlidePagerAdapter =
-            ScreenSlidePagerAdapter(
-                supportFragmentManager
-            )
-        viewPager = findViewById(R.id.viewPager)
-        viewPager!!.adapter = screenSlidePagerAdapter
-        fragments.add(
-            MainLayoutFragment
-                .newInstance(
-                    getString(R.string.different_options), getString(R.string.empty_string),
-                    getString(R.string.empty_string), R.menu.main_menu
-                )
-        )
-        fragments.add(
-            MainLayoutFragment
-                .newInstance(
-                    getString(R.string.text_sample), getString(R.string.footnote_sample),
-                    getString(R.string.timestamp_sample), null
-                )
-        )
-        fragments.add(
-            MainLayoutFragment
-                .newInstance(
-                    getString(R.string.like_this_sample), getString(R.string.empty_string),
-                    getString(R.string.empty_string), null
-                )
-        )
+        gestureDetector =
+            GlassGestureDetector(this, object : GlassGestureDetector.OnGestureListener {
+                override fun onGesture(gesture: GlassGestureDetector.Gesture?): Boolean {
+                    val isHandled = when (gesture) {
+                        GlassGestureDetector.Gesture.SWIPE_FORWARD -> true
+                        GlassGestureDetector.Gesture.SWIPE_BACKWARD -> true
+                        GlassGestureDetector.Gesture.SWIPE_UP -> true
+                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_FORWARD -> true
+                        GlassGestureDetector.Gesture.TWO_FINGER_SWIPE_BACKWARD -> true
+                        GlassGestureDetector.Gesture.TAP -> true
+                        else -> false
+                    }
 
-        screenSlidePagerAdapter.notifyDataSetChanged()
-        val tabLayout: TabLayout = findViewById(R.id.page_indicator)
-        tabLayout.setupWithViewPager(viewPager, true)
+                    if (isHandled) {
+                        EventBus.getDefault().post(GlassGesture(gesture!!))
+                    }
+
+                    return isHandled
+                }
+            })
     }
 
-    override fun onGesture(gesture: GlassGestureDetector.Gesture?): Boolean {
-        return when (gesture) {
-            GlassGestureDetector.Gesture.TAP -> {
-                fragments[viewPager!!.currentItem].onSingleTapUp()
-                true
-            }
-            else -> super.onGesture(gesture)
+    // For Glass XE
+    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
+        event?.let {
+            return gestureDetector.onTouchEvent(it)
         }
+        return super.onGenericMotionEvent(event)
     }
 
-    private inner class ScreenSlidePagerAdapter internal constructor(fm: FragmentManager?) :
-        FragmentStatePagerAdapter(fm!!) {
-        override fun getItem(position: Int): Fragment {
-            return fragments[position]
+    // For Glass EE 2
+    override fun dispatchTouchEvent(event: MotionEvent?): Boolean {
+        event?.let {
+            return gestureDetector.onTouchEvent(event)
         }
-
-        override fun getCount(): Int {
-            return fragments.size
-        }
+        return super.dispatchTouchEvent(event)
     }
 }

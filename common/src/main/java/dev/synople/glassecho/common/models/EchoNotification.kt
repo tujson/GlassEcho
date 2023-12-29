@@ -2,89 +2,86 @@ package dev.synople.glassecho.common.models
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.util.Base64
-import android.util.Log
-import dev.synople.glassecho.common.*
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.io.ByteArrayOutputStream
+import java.io.Serializable
 
+@Parcelize
 data class EchoNotification(
-    val appIcon: Bitmap,
+    val id: String,
+    val appIcon: ByteArray,
     val appName: String,
+    val largeIcon: ByteArray,
     val title: String,
-    val text: String
-)
+    val text: String,
+    val actions: List<String>,
+    val isWakeScreen: Boolean = false,
+    val isRemoved: Boolean = false,
+) : Parcelable, Serializable {
 
-fun echoNotificationToString(echoNotification: EchoNotification): String {
-    val sb = StringBuilder()
+    constructor(
+        id: String,
+        appIcon: Bitmap,
+        appName: String,
+        largeIcon: Bitmap,
+        title: String,
+        text: String,
+        actions: List<String>,
+        isWakeScreen: Boolean = false,
+        isRemoved: Boolean = false,
+    ) : this(
+        id,
+        bitmapToByteArray(appIcon),
+        appName,
+        bitmapToByteArray(largeIcon),
+        title,
+        text,
+        actions,
+        isWakeScreen,
+        isRemoved,
+    )
 
-    val appIconBitmap = echoNotification.appIcon
-    val appIcon = bitmapToString(appIconBitmap)
+    fun getAppIconBitmap(): Bitmap =
+        BitmapFactory.decodeByteArray(appIcon, 0, appIcon.size)
 
-    sb.append(NOTIFICATION_APP_ICON)
-    sb.append(appIcon.length)
-    sb.append(TAG_SEPARATOR)
-    sb.append(appIcon)
+    fun getLargeIconBitmap(): Bitmap =
+        BitmapFactory.decodeByteArray(largeIcon, 0, largeIcon.size)
 
-    sb.append(NOTIFICATION_APP_LABEL)
-    sb.append(echoNotification.appName.length)
-    sb.append(TAG_SEPARATOR)
-    sb.append(echoNotification.appName)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
-    sb.append(NOTIFICATION_TITLE)
-    sb.append(echoNotification.title.length)
-    sb.append(TAG_SEPARATOR)
-    sb.append(echoNotification.title)
+        other as EchoNotification
 
-    sb.append(NOTIFICATION_TEXT)
-    sb.append(echoNotification.text.length)
-    sb.append(TAG_SEPARATOR)
-    sb.append(echoNotification.text)
+        if (id != other.id) return false
 
-    return sb.toString()
-}
-
-private fun bitmapToString(bitmap: Bitmap): String {
-    val baos = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
-    val b: ByteArray = baos.toByteArray()
-    return Base64.encodeToString(b, Base64.DEFAULT)
-}
-
-private fun stringToBitmap(encodedString: String): Bitmap? {
-    return try {
-        val encodeByte =
-            Base64.decode(encodedString, Base64.DEFAULT)
-        BitmapFactory.decodeByteArray(encodeByte, 0, encodeByte.size)
-    } catch (e: Exception) {
-        e.message
-        null
+        return true
     }
-}
 
-fun messageToEchoNotification(receivedMessage: String): EchoNotification {
-    var message = receivedMessage
-    var separator = message.indexOf(TAG_SEPARATOR)
-    val appIconLength = message.substring(NOTIFICATION_APP_ICON.length, separator).toInt()
-    val appIconTag = NOTIFICATION_APP_ICON + appIconLength.toString() + TAG_SEPARATOR
-    Log.v("AppIcon", "Length: $appIconLength\nTag: $appIconTag\nlen: ${message.length}")
-    val appIcon = message.substring(appIconTag.length, appIconTag.length + appIconLength)
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
 
-    message = message.substring((appIconTag + appIcon).length)
-    separator = message.indexOf(TAG_SEPARATOR)
-    val appNameLength = message.substring(NOTIFICATION_APP_LABEL.length, separator).toInt()
-    val appNameTag = NOTIFICATION_APP_LABEL + appNameLength.toString() + TAG_SEPARATOR
-    val appName = message.substring(appNameTag.length, appNameTag.length + appNameLength)
+    override fun toString() =
+        """
+            Id: $id
+            AppIcon size: ${appIcon.size}
+            AppName: $appName
+            LargeIcon size: ${largeIcon.size}
+            Title: $title
+            Text: $text
+            Actions: $actions
+            isRemoved: $isRemoved
+        """.trimIndent()
 
-    message = message.substring((appNameTag + appName).length)
+    companion object {
 
-    separator = message.indexOf(TAG_SEPARATOR)
-    val titleLength = message.substring(NOTIFICATION_TITLE.length, separator).toInt()
-    val titleTag = NOTIFICATION_TITLE + titleLength.toString() + TAG_SEPARATOR
-    val title = message.substring(titleTag.length, titleTag.length + titleLength)
+        private fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
+            val baos = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
+            return baos.toByteArray()
+        }
 
-    message = message.substring((titleTag + title).length)
-
-    separator = message.indexOf(TAG_SEPARATOR)
-    val text = message.substring(separator + 1)
-    return EchoNotification(stringToBitmap(appIcon)!!, appName, title, text)
+    }
 }

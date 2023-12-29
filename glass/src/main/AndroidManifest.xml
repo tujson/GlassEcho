@@ -1,31 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="dev.synople.glassecho.glass">
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature android:name="android.hardware.bluetooth" />
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="com.google.android.glass.permission.DEVELOPMENT" />
 
     <application
+        android:name=".EchoApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-        <activity android:name="dev.synople.glassecho.glass.MainActivity">
+        tools:ignore="GoogleAppIndexingWarning">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="com.google.android.glass.category.DIRECTORY" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name="dev.synople.glassecho.glass.menu.MenuActivity"
-            android:theme="@style/MenuTheme">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.glass.action.VOICE_TRIGGER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="com.google.android.glass.VoiceTrigger"
+                android:resource="@xml/voice_trigger" />
         </activity>
+
+        <service
+            android:name=".EchoService"
+            android:icon="@drawable/ic_glass_logo"
+            android:label="@string/title_activity_live_card_service" />
+
+        <meta-data
+            android:name="com.google.android.glass.TouchEnabledApplication"
+            android:value="true" />
+
     </application>
 
 </manifest>

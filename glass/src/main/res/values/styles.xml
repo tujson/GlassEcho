@@ -1,24 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat">
-        <!-- Customize your theme here. -->
+    <style name="AppTheme" parent="android:Theme.DeviceDefault.NoActionBar.Fullscreen">
         <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:colorEdgeEffect">@android:color/white</item>
-        <item name="android:textColor">@android:color/white</item>
     </style>
 
-    <style name="MenuTheme" parent="AppTheme">
-        <item name="android:windowBackground">@color/semi_transparent</item>
+    <style name="MenuTheme" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
         <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
-
-    <style name="MenuTextViewStyle">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:fontFamily">@string/menu_font</item>
-        <item name="android:textSize">@dimen/menu_text_size</item>
-        <item name="android:layout_margin">@dimen/menu_text_margin</item>
-    </style>
-
 </resources>

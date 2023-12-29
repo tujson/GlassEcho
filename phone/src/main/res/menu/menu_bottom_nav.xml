@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/statusFragment"
+        android:icon="@drawable/ic_notif_icon"
+        android:title="@string/status" />
+
+    <item
+        android:id="@+id/notificationListFragment"
+        android:icon="@drawable/ic_list"
+        android:title="@string/notification_list" />
+
+    <item
+        android:id="@+id/settingsFragment"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/settings" />
+</menu>

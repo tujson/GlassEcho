@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/connectFragment">
+
+    <fragment
+        android:id="@+id/connectFragment"
+        android:name="dev.synople.glassecho.glass.fragments.ConnectFragment"
+        android:label="fragment_connect"
+        tools:layout="@layout/fragment_connect">
+
+        <action
+            android:id="@+id/action_connectFragment_to_notificationTimelineFragment"
+            app:destination="@id/notificationTimelineFragment"
+            app:popUpTo="@id/connectFragment"
+            app:popUpToInclusive="true"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/notificationTimelineFragment"
+        android:name="dev.synople.glassecho.glass.fragments.NotificationTimelineFragment"
+        android:label="fragment_notification_timeline"
+        tools:layout="@layout/fragment_notification_timeline">
+
+        <action
+            android:id="@+id/action_notificationTimelineFragment_to_notificationActionsFragment"
+            app:destination="@id/notificationActionsFragment"
+            app:enterAnim="@anim/slide_in_up"
+            app:exitAnim="@anim/slide_out_up"
+            app:popEnterAnim="@anim/slide_in_down"
+            app:popExitAnim="@anim/slide_out_down" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/notificationActionsFragment"
+        android:name="dev.synople.glassecho.glass.fragments.NotificationActionsFragment"
+        android:label="fragment_notification_actions"
+        tools:layout="@layout/fragment_notification_actions">
+
+        <argument
+            android:name="actions"
+            app:argType="string[]" />
+        <argument
+            android:name="notificationId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_notificationActionsFragment_to_notificationReplyFragment"
+            app:destination="@id/notificationReplyFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/notificationReplyFragment"
+        android:name="dev.synople.glassecho.glass.fragments.NotificationReplyFragment"
+        android:label="fragment_notification_reply"
+        tools:layout="@layout/fragment_notification_reply" >
+        <action
+            android:id="@+id/action_notificationReplyFragment_to_notificationTimelineFragment"
+            app:destination="@id/notificationTimelineFragment" />
+        <argument
+            android:name="notificationId"
+            app:argType="string" />
+        <argument
+            android:name="action"
+            app:argType="string" />
+    </fragment>
+</navigation>
