@@ -28,9 +28,9 @@ import android.view.MotionEvent;
 import android.view.View;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import dev.synople.glassecho.glassgesturedetector.GlassGestureDetector;
-import dev.synople.glassecho.glassgesturedetector.GlassGestureDetector.Gesture;
-import dev.synople.glassecho.glassgesturedetector.GlassGestureDetector.OnGestureListener;
+import dev.synople.glassecho.glass.utils.GlassGestureDetector;
+import dev.synople.glassecho.glass.utils.GlassGestureDetector.Gesture;
+import dev.synople.glassecho.glass.utils.GlassGestureDetector.OnGestureListener;
 
 /**
  * Base activity which provides:

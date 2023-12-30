@@ -25,7 +25,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SnapHelper
 import dev.synople.glassecho.glass.BaseActivity
 import dev.synople.glassecho.glass.R
-import dev.synople.glassecho.glassgesturedetector.GlassGestureDetector
+import dev.synople.glassecho.glass.utils.GlassGestureDetector
 import java.util.*
 
 /**
